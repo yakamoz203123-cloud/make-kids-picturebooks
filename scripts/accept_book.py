@@ -20,6 +20,16 @@ def structure_errors(pages):
         return ['完整绘本需要封面、实际故事页及封底']
     return []
 
+def story_text_errors(pages,story):
+    cursor=0;errors=[]
+    for number,page in enumerate(pages,1):
+        if page.get('kind')!='story':continue
+        text=normal(page.get('text',''))
+        found=story.find(text,cursor)
+        if found<0:errors.append(f'页{number}: 朗读稿缺少或乱序本页正文')
+        else:cursor=found+len(text)
+    return errors
+
 def reviewed_image_errors(doc,index,path):
     from PIL import Image
     try:
@@ -98,6 +108,10 @@ def check_book(project_path,book_id):
         manifest_path=artifact('page_manifest');manifest=read(manifest_path)
         storyboard=read(artifact('storyboard'));storyboard=storyboard.get('pages',[]) if isinstance(storyboard,dict) else storyboard
         review=read(artifact('review'))
+        for field,label in (('font_path','字体'),('font_license_path','字体许可证'),('font_provenance_path','字体来源证明')):
+            value=layout.get(field)
+            if not isinstance(value,(str,Path)) or not str(value).strip():errors.append(f'验收版面须保存项目内{label}路径')
+            else:track(value,layout_path.parent)
         errors.extend(quality_errors(layout))
         if book.get('age_band') not in ('3-4','5-7','8-10','5-6'):errors.append('缺少有效年龄选择')
         if concept.get('age_band')!=book.get('age_band') or manifest.get('age_band')!=book.get('age_band'):errors.append('年龄记录不一致')
@@ -107,6 +121,7 @@ def check_book(project_path,book_id):
         pages=layout['pages'];n=len(pages);pairs=booklet_pairs(n)
         errors.extend(structure_errors(pages))
         story=normal(artifact('story').read_text(encoding='utf-8'))
+        errors.extend(story_text_errors(pages,story))
         if len(storyboard)!=n or len(manifest['pages'])!=n:errors.append('分镜、清单与版面页数不一致')
         for i,page in enumerate(pages):
             number=i+1
@@ -115,7 +130,6 @@ def check_book(project_path,book_id):
             if i>=len(storyboard) or i>=len(manifest['pages']):continue
             saved=manifest['pages'][i];board=storyboard[i]
             if page.get('text')!=board.get('text'):errors.append(f'页{number}: 正文与分镜不一致')
-            if normal(page.get('text','')) not in story:errors.append(f'页{number}: 朗读稿缺少本页正文')
             if saved.get('text_area')!=page.get('text_box_mm'):errors.append(f'页{number}: 文字区域不一致')
             if saved.get('characters_version')!=book['characters_version']:errors.append(f'页{number}: 角色版本不一致')
             track(saved['current_prompt_path'],manifest_path.parent)
@@ -131,11 +145,6 @@ def check_book(project_path,book_id):
                 with Image.open(actual) as img:pw,ph=img.size
                 box=page['image_box_mm'];effective=max(pw/(box[2]/25.4),ph/(box[3]/25.4))
                 if effective+0.01<layout.get('target_dpi',300):errors.append(f'页{number}: 原生分辨率不足')
-        font=Path(layout.get('font_path',''))
-        if not layout.get('font_path'):errors.append('验收版面须保存项目内字体路径')
-        else:track(font,layout_path.parent)
-        if layout.get('font_license_path'):track(layout['font_license_path'],layout_path.parent)
-        if layout.get('font_provenance_path'):track(layout['font_provenance_path'],layout_path.parent)
         def reviewed(field,count,index):
             records=review.get(field,[])
             if not isinstance(records,list) or len(records)!=count:errors.append(f'{field}: 未逐页记录审核');return

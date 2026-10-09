@@ -71,5 +71,26 @@ class CompleteWorkflowTests(unittest.TestCase):
     def test_review_text_file_is_not_final_render(self):
         p=self.root/'review.json';data=read(p);data['reading_pages'][0]['image_path']='source.txt';p.write_text(json.dumps(data))
         self.assertTrue(any('审核渲染图' in e for e in check_book(self.root/'project.json','b1')['errors']))
+    def test_story_manuscript_ignores_cover_and_back_but_rejects_reversed_story_pages(self):
+        def set_pages(story_texts,export_dir):
+            layout=read(self.root/'layout.json')
+            layout['pages'][0]['text']='小小探险家'
+            layout['pages'][1]['text'],layout['pages'][2]['text']=story_texts
+            layout['pages'][3]['text']='明天见！'
+            (self.root/'layout.json').write_text(json.dumps(layout,ensure_ascii=False),encoding='utf-8')
+            (self.root/'storyboard.json').write_text(json.dumps({'pages':layout['pages']},ensure_ascii=False),encoding='utf-8')
+            (self.root/'story.txt').write_text('先穿过花园。再回到家。',encoding='utf-8')
+            export_book(self.root/'layout.json',self.root/export_dir)
+            review=read(self.root/'review.json')
+            for i,record in enumerate(review['reading_pages'],1):record['image_path']=f'{export_dir}/reading-pages/page-{i:02}.png'
+            for i,record in enumerate(review['print_sides'],1):record['image_path']=f'{export_dir}/print-pages/page-{i:02}.png'
+            (self.root/'review.json').write_text(json.dumps(review,ensure_ascii=False),encoding='utf-8')
+            project=read(self.root/'project.json');artifacts=project['books'][0]['artifacts']
+            artifacts['reading_pdf']=f'{export_dir}/reading.pdf';artifacts['print_pdf']=f'{export_dir}/print.pdf'
+            (self.root/'project.json').write_text(json.dumps(project,ensure_ascii=False),encoding='utf-8')
+        set_pages(('先穿过花园。','再回到家。'),'boundary-pages')
+        self.assertEqual(check_book(self.root/'project.json','b1')['errors'],[])
+        set_pages(('再回到家。','先穿过花园。'),'reversed-story-pages')
+        self.assertIn('页3: 朗读稿缺少或乱序本页正文',check_book(self.root/'project.json','b1')['errors'])
 
 if __name__=='__main__':unittest.main()

@@ -65,6 +65,20 @@ class ReleaseGuardTests(unittest.TestCase):
                 render_book(root / 'layout.json', root / 'reading.pdf')
             self.assertFalse((root / 'reading.pdf').exists())
 
+    def test_story_text_ignores_boundary_pages_and_preserves_story_order(self):
+        from accept_book import story_text_errors
+        pages = [
+            {'kind': 'cover', 'text': '小小探险家'},
+            {'kind': 'story', 'text': '先穿过花园。'},
+            {'kind': 'parents', 'text': '给家长的话'},
+            {'kind': 'story', 'text': '再回到家。'},
+            {'kind': 'blank', 'text': ''},
+            {'kind': 'back', 'text': '明天见！'},
+        ]
+        self.assertEqual(story_text_errors(pages, '先穿过花园。再回到家。'), [])
+        pages[1]['text'], pages[3]['text'] = pages[3]['text'], pages[1]['text']
+        self.assertTrue(story_text_errors(pages, '先穿过花园。再回到家。'))
+
 
 if __name__ == '__main__':
     unittest.main()
