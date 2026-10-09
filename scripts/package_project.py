@@ -9,7 +9,13 @@ from accept_book import verify_receipt
 from project_paths import normalize_relative_path,resolve_project_file
 
 def package_project(project_path,book_id,output):
-    project_path=Path(project_path).resolve();base=project_path.parent;output=Path(output).resolve()
+    project_path=Path(project_path).resolve();base=project_path.parent
+    candidate=Path(output)
+    if candidate.is_absolute():
+        try:output_relative=candidate.resolve().relative_to(base)
+        except ValueError as exc:raise ValueError('打包输出必须位于项目目录内') from exc
+    else:output_relative=candidate
+    output=resolve_project_file(base,normalize_relative_path(base,output_relative))
     if output.exists():raise FileExistsError(output)
     project=json.loads(project_path.read_text(encoding='utf-8'))
     book=next(b for b in project['books'] if b['id']==book_id)

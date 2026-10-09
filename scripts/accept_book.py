@@ -3,7 +3,7 @@
 File hashes detect later edits. They do not substitute for human visual or
 scientific review; review records must already contain actual evidence.
 """
-import argparse,hashlib,json,re
+import argparse,hashlib,json,os,re,tempfile
 from pathlib import Path
 import fitz
 from asset_registry import collect_declared_assets
@@ -183,7 +183,13 @@ def accept_book(project_path,book_id,receipt_path):
     destination=Path(receipt_path).resolve()
     if destination.exists():raise FileExistsError(destination)
     relative=destination.relative_to(path.parent).as_posix();destination.parent.mkdir(parents=True,exist_ok=True)
-    destination.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    fd,tmp=tempfile.mkstemp(prefix='.receipt-',dir=destination.parent)
+    try:
+        with os.fdopen(fd,'w',encoding='utf-8') as f:
+            json.dump(report,f,ensure_ascii=False,indent=2);f.write('\n');f.flush();os.fsync(f.fileno())
+        os.link(tmp,destination)
+    finally:
+        if os.path.exists(tmp):os.unlink(tmp)
     data=read(path);book=next(b for b in data['books'] if b['id']==book_id)
     book['artifacts']['acceptance']=relative;book['status']='digital_checked'
     try:save_project(path,data)

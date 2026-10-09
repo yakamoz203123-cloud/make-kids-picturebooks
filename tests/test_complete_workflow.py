@@ -1,5 +1,6 @@
 import json,shutil,sys,tempfile,unittest,zipfile
 from pathlib import Path
+from unittest.mock import patch
 from PIL import Image
 SKILL=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(SKILL/'scripts'))
@@ -60,6 +61,13 @@ class CompleteWorkflowTests(unittest.TestCase):
         Image.new('RGB',(1600,2400),'blue').save(self.root/'other.png')
         p=self.root/'manifest.json';data=read(p);data['pages'][0]['current_image_path']='other.png';p.write_text(json.dumps(data))
         self.assertTrue(any('选图不一致' in e for e in check_book(self.root/'project.json','b1')['errors']))
+    def test_accept_does_not_overwrite_receipt_created_during_publish(self):
+        project_path=self.root/'project.json';receipt_path=self.root/'receipt.json'
+        receipt_path.write_text('already published',encoding='utf-8')
+        with patch('accept_book.Path.exists',return_value=False):
+            with self.assertRaises(FileExistsError):accept_book(project_path,'b1',receipt_path)
+        self.assertEqual(receipt_path.read_text(encoding='utf-8'),'already published')
+        self.assertNotIn('acceptance',read(project_path)['books'][0]['artifacts'])
     def test_review_text_file_is_not_final_render(self):
         p=self.root/'review.json';data=read(p);data['reading_pages'][0]['image_path']='source.txt';p.write_text(json.dumps(data))
         self.assertTrue(any('审核渲染图' in e for e in check_book(self.root/'project.json','b1')['errors']))
