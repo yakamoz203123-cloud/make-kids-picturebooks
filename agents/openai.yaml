@@ -1,0 +1,13 @@
+interface:
+  display_name: 宝宝知识绘本
+  short_description: 从成人知识书筛选适龄概念，创作3—4、5—7或8—10岁原创绘本，生成家庭打印文件
+  default_prompt: 使用 $make-kids-picturebooks，从我提供的知识书中筛选适合所选年龄的内容，说明选题理由，先制作一册原创家庭打印绘本；先确定3—4、5—7或8—10岁，只做所选版本。
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

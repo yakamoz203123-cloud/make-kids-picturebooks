@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "book_id": "b01",
+  "age_band": null,
+  "pages": [
+    {
+      "page": 1,
+      "text_version": "v1",
+      "current_prompt_path": "prompts/page-01.md",
+      "current_image_path": null,
+      "characters_version": "v1",
+      "text_area": [
+        14,
+        110,
+        120,
+        80
+      ],
+      "props": [
+        {
+          "id": "blocks",
+          "count": 3,
+          "location": "地面",
+          "state": "散放",
+          "change": "首次出现"
+        }
+      ],
+      "knowledge_check": {
+        "status": "pending",
+        "evidence": ""
+      }
+    }
+  ]
+}

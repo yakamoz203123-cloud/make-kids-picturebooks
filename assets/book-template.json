@@ -1,0 +1,34 @@
+{
+  "title": "绘本名称",
+  "page_mm": [
+    148,
+    210
+  ],
+  "font_size": 22,
+  "safe_margin_mm": 10,
+  "target_dpi": 300,
+  "pages": [
+    {
+      "number": 1,
+      "text": "绘本名称",
+      "image": "images/page-01.png",
+      "image_box_mm": [
+        10,
+        10,
+        128,
+        190
+      ],
+      "text_box_mm": [
+        14,
+        120,
+        120,
+        76
+      ],
+      "image_role": "background",
+      "text_area_reviewed": false,
+      "kind": "cover"
+    }
+  ],
+  "quality_profile": "print",
+  "quality_approval": null
+}

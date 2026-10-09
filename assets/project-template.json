@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "title": "未命名知识书",
+  "source": {
+    "path": "source/book.txt",
+    "version": "v1",
+    "coverage": "partial",
+    "chapter_index": []
+  },
+  "characters_version": "v1",
+  "characters_path": "characters/v1",
+  "printing": {
+    "paper_mm": [
+      297,
+      210
+    ],
+    "page_mm": [
+      148,
+      210
+    ],
+    "duplex": "test-first"
+  },
+  "books": [],
+  "next_chapter": null,
+  "notes": [],
+  "target_age_bands": [],
+  "adaptation_mode": "selected_topics",
+  "topic_selection": {
+    "age_band": null,
+    "status": "pending",
+    "topics": [],
+    "queue": []
+  }
+}
