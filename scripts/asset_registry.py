@@ -16,10 +16,18 @@ def _add_file(assets: set[str], root: Path, value: str | Path, label: str) -> Pa
     return path
 
 
-def _add_directory_files(assets: set[str], root: Path, value: str | Path, label: str) -> None:
+def _add_directory_files(
+    assets: set[str], root: Path, value: str | Path, label: str, source_path: Path
+) -> None:
     directory = resolve_project_file(root, value)
     if not directory.is_dir():
         raise ValueError(f"{label}目录缺失: {value}")
+    try:
+        source_path.parent.resolve().relative_to(directory)
+    except ValueError:
+        pass
+    else:
+        raise ValueError(f"{label}目录不得包含来源目录: {value}")
     for path in directory.rglob("*"):
         if path.is_file():
             resolved = path.resolve()
@@ -49,7 +57,7 @@ def collect_declared_assets(project_path: Path, project: dict, book: dict) -> se
     source = project.get("source")
     if not isinstance(source, dict) or not source.get("path"):
         raise ValueError("缺少显式来源文件")
-    _add_file(assets, root, source["path"], "来源")
+    source_path = _add_file(assets, root, source["path"], "来源")
 
     artifacts = book.get("artifacts")
     if not isinstance(artifacts, dict):
@@ -62,7 +70,7 @@ def collect_declared_assets(project_path: Path, project: dict, book: dict) -> se
 
     characters_path = project.get("characters_path")
     if characters_path:
-        _add_directory_files(assets, root, characters_path, "角色参考")
+        _add_directory_files(assets, root, characters_path, "角色参考", source_path)
 
     review_path = declared.get("review")
     if review_path:
@@ -87,8 +95,9 @@ def collect_declared_assets(project_path: Path, project: dict, book: dict) -> se
             ("font_provenance_path", "字体来源证明"),
         ):
             value = layout.get(field)
-            if value:
-                path = require_project_file(layout_path.parent, value, label)
-                assets.add(_canonical(root, path))
+            if not isinstance(value, (str, Path)) or not str(value).strip():
+                raise ValueError(f"缺少{label}")
+            path = require_project_file(layout_path.parent, value, label)
+            assets.add(_canonical(root, path))
 
     return assets

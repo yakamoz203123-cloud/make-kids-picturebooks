@@ -83,6 +83,29 @@ class AssetRegistryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             collect_declared_assets(self.project_path, self.project, self.book)
 
+    def test_rejects_source_directory_as_character_reference_directory(self):
+        self.project["characters_path"] = "sources"
+
+        with self.assertRaisesRegex(ValueError, "角色参考目录"):
+            collect_declared_assets(self.project_path, self.project, self.book)
+
+    def test_rejects_missing_font_evidence(self):
+        layout_path = self.root / "artifacts/layout.json"
+        for field in ("font_path", "font_license_path", "font_provenance_path"):
+            with self.subTest(field=field):
+                layout = json.loads(layout_path.read_text(encoding="utf-8"))
+                del layout[field]
+                layout_path.write_text(json.dumps(layout), encoding="utf-8")
+
+                with self.assertRaisesRegex(ValueError, "缺少"):
+                    collect_declared_assets(self.project_path, self.project, self.book)
+
+                layout_path.write_text(json.dumps({
+                    "font_path": "fonts/book.ttf",
+                    "font_license_path": "fonts/license.txt",
+                    "font_provenance_path": "fonts/provenance.json",
+                }), encoding="utf-8")
+
     def test_returns_posix_relative_paths_for_windows_separators(self):
         self.book["artifacts"]["story"] = "artifacts\\story.txt"
 

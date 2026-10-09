@@ -66,6 +66,12 @@ class ProjectPathTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "来源"):
             require_project_file(self.root, "missing.txt", "来源")
 
+    def test_rejects_unsupported_path_value_types(self):
+        for value in (None, 42, object()):
+            with self.subTest(value=type(value).__name__):
+                with self.assertRaises(TypeError):
+                    normalize_relative_path(self.root, value)
+
 
 if __name__ == "__main__":
     unittest.main()

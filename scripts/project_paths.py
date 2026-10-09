@@ -9,6 +9,8 @@ def _project_root(base: Path) -> Path:
 
 def normalize_relative_path(base: Path, value: str | Path) -> str:
     """Return a project-relative path in POSIX form, rejecting escapes."""
+    if not isinstance(value, (str, Path)):
+        raise TypeError("项目路径必须是字符串或 Path")
     raw = str(value)
     candidate = raw.replace("\\", "/")
     if not candidate:
