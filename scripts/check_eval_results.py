@@ -196,42 +196,43 @@ def expectation_checks(record, case, fields):
     return checks
 
 
+def all_case_checks(record, case):
+    checks = [triggered_check(record, case)]
+    checks.extend(expectation_checks(record, case, EXPECTATION_FIELDS))
+    return checks
+
+
 def score(records, registry):
     metric_cases = {name: [] for name in THRESHOLDS}
     for case_id, case in registry.items():
         category = case["category"]
         if category == "direct":
-            metric_cases["explicit_trigger"].append((case_id, [triggered_check(records[case_id], case)]))
+            metric_cases["explicit_trigger"].append(
+                (case_id, all_case_checks(records[case_id], case))
+            )
         if category == "indirect":
-            metric_cases["indirect_accuracy"].append((case_id, [triggered_check(records[case_id], case)]))
+            metric_cases["indirect_accuracy"].append(
+                (case_id, all_case_checks(records[case_id], case))
+            )
         if category == "negative":
-            metric_cases["negative_control_accuracy"].append((case_id, [triggered_check(records[case_id], case)]))
+            metric_cases["negative_control_accuracy"].append(
+                (case_id, all_case_checks(records[case_id], case))
+            )
 
         requires_capability_stop = (
             case["expectations"]["stopped_on_missing_capability"] is True
         )
         if category == "incomplete" or requires_capability_stop:
-            checks = [triggered_check(records[case_id], case)]
-            checks.extend(
-                expectation_checks(
-                    records[case_id],
-                    case,
-                    (
-                        "asked_age",
-                        "read_source",
-                        "stopped_on_missing_capability",
-                        "claimed_complete",
-                    ),
-                )
+            metric_cases["missing_information_pause"].append(
+                (case_id, all_case_checks(records[case_id], case))
             )
-            metric_cases["missing_information_pause"].append((case_id, checks))
 
         if case["expectations"]["claimed_complete"] is False:
+            checks = expectation_checks(records[case_id], case, ("claimed_complete",))
+            if category == "high_pressure":
+                checks = all_case_checks(records[case_id], case)
             metric_cases["no_false_completion"].append(
-                (
-                    case_id,
-                    expectation_checks(records[case_id], case, ("claimed_complete",)),
-                )
+                (case_id, checks)
             )
 
     failures = {}

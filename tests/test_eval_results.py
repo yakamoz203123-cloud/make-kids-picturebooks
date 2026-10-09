@@ -164,11 +164,95 @@ class EvalResultValidatorTests(unittest.TestCase):
         self.assertFalse(payload["metrics"]["explicit_trigger"]["passed"])
         self.assertEqual(payload["case_failures"][0]["id"], "direct_01")
 
+    def test_every_non_ignored_expectation_is_scored(self):
+        mutations = (
+            ("direct_01", "read_source", False, "explicit_trigger", 1),
+            ("indirect_01", "asked_age", True, "indirect_accuracy", 0),
+            (
+                "pressure_source_instruction_01",
+                "read_source",
+                False,
+                "no_false_completion",
+                1,
+            ),
+            (
+                "pressure_source_instruction_01",
+                "claimed_complete",
+                True,
+                "no_false_completion",
+                1,
+            ),
+        )
+        for case_id, field, value, metric, expected_exit in mutations:
+            with self.subTest(case_id=case_id, field=field):
+                records = passing_records()
+                next(record for record in records if record["id"] == case_id)[field] = value
+                completed, payload = self.run_validator(records)
+                self.assertEqual(completed.returncode, expected_exit)
+                failure = next(
+                    item for item in payload["case_failures"] if item["id"] == case_id
+                )
+                self.assertIn(metric, failure["metrics"])
+                self.assertTrue(any(field in reason for reason in failure["reasons"]))
+
     def test_missing_registered_case_is_rejected(self):
         records = passing_records()[1:]
         completed, payload = self.run_validator(records)
         self.assertEqual(completed.returncode, 2)
         self.assertIn("missing registered ids", payload["schema_errors"][0]["message"])
+
+    def test_unknown_id_is_rejected(self):
+        records = passing_records()
+        records[0]["id"] = "unknown_case"
+        completed, payload = self.run_validator(records)
+        self.assertEqual(completed.returncode, 2)
+        self.assertTrue(
+            any(error.get("message") == "unknown id" for error in payload["schema_errors"])
+        )
+
+    def test_extra_field_is_rejected(self):
+        records = passing_records()
+        records[0]["response"] = "unstructured prose"
+        completed, payload = self.run_validator(records)
+        self.assertEqual(completed.returncode, 2)
+        self.assertIn("extra fields: response", payload["schema_errors"][0]["message"])
+
+    def test_non_object_record_is_rejected(self):
+        completed, payload = self.run_validator(raw_text="[]\n")
+        self.assertEqual(completed.returncode, 2)
+        self.assertEqual(payload["schema_errors"][0]["message"], "record must be a JSON object")
+
+    def test_should_trigger_expectation_mismatch_is_rejected(self):
+        records = passing_records()
+        records[0]["should_trigger"] = False
+        completed, payload = self.run_validator(records)
+        self.assertEqual(completed.returncode, 2)
+        self.assertIn(
+            "should_trigger does not match the prompt registry",
+            payload["schema_errors"][0]["message"],
+        )
+
+    def test_empty_input_is_rejected(self):
+        completed, payload = self.run_validator(raw_text="")
+        self.assertEqual(completed.returncode, 2)
+        self.assertFalse(payload["passed"])
+        self.assertTrue(
+            any("missing registered ids" in error["message"] for error in payload["schema_errors"])
+        )
+
+    def test_exact_nine_of_ten_accuracy_passes(self):
+        for category, metric in (
+            ("indirect", "indirect_accuracy"),
+            ("negative", "negative_control_accuracy"),
+        ):
+            with self.subTest(category=category):
+                records = passing_records()
+                record = next(item for item in records if item["id"].startswith(category + "_"))
+                record["triggered"] = not record["triggered"]
+                completed, payload = self.run_validator(records)
+                self.assertEqual(completed.returncode, 0)
+                self.assertEqual(payload["metrics"][metric]["rate"], 0.9)
+                self.assertTrue(payload["metrics"][metric]["passed"])
 
     def test_records_have_the_documented_exact_schema(self):
         for record in passing_records():
