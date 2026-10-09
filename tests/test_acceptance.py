@@ -37,13 +37,13 @@ class AcceptanceTests(unittest.TestCase):
   from accept_book import verify_receipt
   import hashlib
   with tempfile.TemporaryDirectory() as td:
-   root=Path(td);(root/'story.md').write_text('original')
+   root=Path(td);(root/'story.md').write_text('original',encoding='utf-8')
    project={'source':{'version':'v1'},'characters_version':'v1'}
    book={'id':'b1','age_band':'3-4','source_version':'v1','characters_version':'v1','artifacts':{'acceptance':'receipt.json'}}
    receipt={'schema_version':1,'book_id':'b1','age_band':'3-4','source_version':'v1','characters_version':'v1','files':{'story.md':hashlib.sha256((root/'story.md').read_bytes()).hexdigest()}}
-   (root/'receipt.json').write_text(json.dumps(receipt))
+   (root/'receipt.json').write_text(json.dumps(receipt),encoding='utf-8')
    self.assertEqual(verify_receipt(project,book,root),[])
-   (root/'story.md').write_text('changed')
+   (root/'story.md').write_text('changed',encoding='utf-8')
    self.assertTrue(verify_receipt(project,book,root))
  def test_missing_receipt_does_not_claim_completion(self):
   from accept_book import verify_receipt
@@ -63,11 +63,11 @@ class AcceptanceTests(unittest.TestCase):
   from accept_book import verify_receipt
   import hashlib
   with tempfile.TemporaryDirectory() as td:
-   root=Path(td);(root/'source.txt').write_text('a');(root/'other.txt').write_text('b')
+   root=Path(td);(root/'source.txt').write_text('a',encoding='utf-8');(root/'other.txt').write_text('b',encoding='utf-8')
    project={'source':{'path':'source.txt','version':'v1'},'characters_version':'v1','characters_path':'characters/v1'}
    book={'id':'b1','age_band':'3-4','artifacts':{'acceptance':'receipt.json'}}
    receipt={'schema_version':1,'book_id':'b1','age_band':'3-4','source_version':'v1','characters_version':'v1','source_path':'source.txt','characters_path':'characters/v1','files':{'source.txt':hashlib.sha256((root/'source.txt').read_bytes()).hexdigest()}}
-   (root/'receipt.json').write_text(json.dumps(receipt))
+   (root/'receipt.json').write_text(json.dumps(receipt),encoding='utf-8')
    self.assertEqual(verify_receipt(project,book,root),[])
    project['source']['path']='other.txt'
    self.assertTrue(verify_receipt(project,book,root))

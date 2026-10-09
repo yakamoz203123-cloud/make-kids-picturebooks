@@ -5,7 +5,7 @@ scientific review; review records must already contain actual evidence.
 """
 import argparse,hashlib,json,os,re,tempfile
 from pathlib import Path
-import fitz
+import pymupdf as fitz
 from asset_registry import collect_declared_assets
 from project_paths import normalize_relative_path,resolve_project_file
 from validate_page_manifest import validate_page_manifest

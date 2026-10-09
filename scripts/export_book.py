@@ -2,7 +2,7 @@
 import argparse,json,os,shutil,tempfile
 from pathlib import Path
 from io import BytesIO
-import fitz
+import pymupdf as fitz
 from PIL import Image
 from render_book import render_book
 from impose_booklet import impose_booklet,booklet_pairs

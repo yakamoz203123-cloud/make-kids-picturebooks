@@ -11,8 +11,8 @@ from package_project import package_project
 
 class CompleteWorkflowTests(unittest.TestCase):
     def setUp(self):
-        self.temp=tempfile.TemporaryDirectory();self.root=Path(self.temp.name);r=self.root
-        def write(p,data):(r/p).write_text(json.dumps(data,ensure_ascii=False) if not isinstance(data,str) else data)
+        self.temp=tempfile.TemporaryDirectory();self.root=Path(self.temp.name)/'绘本项目';self.root.mkdir();r=self.root
+        def write(p,data):(r/p).write_text(json.dumps(data,ensure_ascii=False) if not isinstance(data,str) else data,encoding='utf-8')
         write('source.txt','source A');write('source-new.txt','source B')
         (r/'characters').mkdir();write('characters/ref.txt','original character reference')
         (r/'new-characters').mkdir();write('new-characters/ref.txt','different character reference')
@@ -29,6 +29,10 @@ class CompleteWorkflowTests(unittest.TestCase):
         write('project.json',{'schema_version':1,'target_age_bands':['5-7'],'source':{'path':'source.txt','version':'v1','coverage':'synthetic'},'characters_version':'v1','characters_path':'characters','books':[{'id':'b1','age_band':'5-7','source_version':'v1','characters_version':'v1','status':'laid_out','artifacts':{'concept':'concept.json','story':'story.txt','storyboard':'storyboard.json','layout':'layout.json','page_manifest':'manifest.json','reading_pdf':'export/reading.pdf','print_pdf':'export/print.pdf','review':'review.json'}}]})
 
     def tearDown(self):self.temp.cleanup()
+    def test_unicode_project_path_uses_utf8_fixture(self):
+        report=check_book(self.root/'project.json','b1')
+        self.assertEqual(report['errors'],[])
+        self.assertIn('story.txt',report['files'])
     def test_export_accept_resume_and_package(self):
         p=self.root/'project.json'
         project=read(p)
@@ -54,12 +58,12 @@ class CompleteWorkflowTests(unittest.TestCase):
             self.assertEqual(set(archive.namelist()),set(receipt['files'])|{'project.json','receipts/receipt.json'})
             self.assertTrue(all('\\' not in path for path in archive.namelist()))
         with self.assertRaises(FileExistsError):package_project(p,'b1',output_zip)
-        (self.root/'story.txt').write_text('changed')
+        (self.root/'story.txt').write_text('changed',encoding='utf-8')
         self.assertEqual(next_action(read(p),self.root)['stage'],'revalidate')
         with self.assertRaises(ValueError):package_project(p,'b1',self.root/'stale.zip')
     def test_existing_but_different_selected_image_is_rejected(self):
         Image.new('RGB',(1600,2400),'blue').save(self.root/'other.png')
-        p=self.root/'manifest.json';data=read(p);data['pages'][0]['current_image_path']='other.png';p.write_text(json.dumps(data))
+        p=self.root/'manifest.json';data=read(p);data['pages'][0]['current_image_path']='other.png';p.write_text(json.dumps(data),encoding='utf-8')
         self.assertTrue(any('选图不一致' in e for e in check_book(self.root/'project.json','b1')['errors']))
     def test_accept_does_not_overwrite_receipt_created_during_publish(self):
         project_path=self.root/'project.json';receipt_path=self.root/'receipt.json'
@@ -69,7 +73,7 @@ class CompleteWorkflowTests(unittest.TestCase):
         self.assertEqual(receipt_path.read_text(encoding='utf-8'),'already published')
         self.assertNotIn('acceptance',read(project_path)['books'][0]['artifacts'])
     def test_review_text_file_is_not_final_render(self):
-        p=self.root/'review.json';data=read(p);data['reading_pages'][0]['image_path']='source.txt';p.write_text(json.dumps(data))
+        p=self.root/'review.json';data=read(p);data['reading_pages'][0]['image_path']='source.txt';p.write_text(json.dumps(data),encoding='utf-8')
         self.assertTrue(any('审核渲染图' in e for e in check_book(self.root/'project.json','b1')['errors']))
     def test_story_manuscript_ignores_cover_and_back_but_rejects_reversed_story_pages(self):
         def set_pages(story_texts,export_dir):

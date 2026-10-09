@@ -7,7 +7,7 @@ class ExportTests(unittest.TestCase):
   from pypdf import PdfReader
   with tempfile.TemporaryDirectory() as td:
    root=Path(td);layout=root/'layout.json'
-   layout.write_text(json.dumps({'font_size':22,'pages':[{'number':i,'text':'小朋友。'} for i in range(1,5)]}))
+   layout.write_text(json.dumps({'font_size':22,'pages':[{'number':i,'text':'小朋友。'} for i in range(1,5)]}),encoding='utf-8')
    result=export_book(layout,root/'export')
    self.assertEqual(result['reading_pages'],4);self.assertEqual(result['print_sides'],2)
    self.assertEqual(len(list((root/'export/reading-pages').glob('*.png'))),4)
@@ -17,7 +17,7 @@ class ExportTests(unittest.TestCase):
   from export_book import export_book
   with tempfile.TemporaryDirectory() as td:
    root=Path(td);layout=root/'layout.json'
-   layout.write_text(json.dumps({'pages':[{'number':1,'text':'小朋友。'}]}))
+   layout.write_text(json.dumps({'pages':[{'number':1,'text':'小朋友。'}]}),encoding='utf-8')
    with self.assertRaises(ValueError):export_book(layout,root/'export')
    self.assertFalse((root/'export').exists())
 if __name__=='__main__':unittest.main()

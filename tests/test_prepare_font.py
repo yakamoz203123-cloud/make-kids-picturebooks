@@ -36,5 +36,5 @@ class FontTests(unittest.TestCase):
         self.assertIsNotNone(prepare_font)
         with tempfile.TemporaryDirectory() as td:
             with self.assertRaises(ValueError):prepare_font(Path(td)/'missing.ttf',Path(td)/'f.ttf','小朋友')
-            with self.assertRaisesRegex(ValueError,'缺字'):prepare_font(Path('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'),Path(td)/'f.ttf','小朋友')
+            with self.assertRaisesRegex(ValueError,'缺字'):prepare_font(make_source(Path(td)),Path(td)/'f.ttf','缺')
 if __name__=='__main__':unittest.main()

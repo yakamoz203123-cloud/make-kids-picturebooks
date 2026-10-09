@@ -43,7 +43,7 @@ class ProjectTests(unittest.TestCase):
             self.data['books'][0]['status']='bogus'
             with self.assertRaises(ValueError): save_project(p,self.data)
             self.assertEqual(p.read_bytes(),original)
-            self.assertEqual(json.loads(p.read_text())['books'][0]['status'],'illustrated')
+            self.assertEqual(json.loads(p.read_text(encoding='utf-8'))['books'][0]['status'],'illustrated')
     def test_malformed_input_returns_errors(self):
         self.assertIsNotNone(validate_project)
         for data in [None,[],{}, {'schema_version':1,'source':None,'books':[None]}]:

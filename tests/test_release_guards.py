@@ -35,7 +35,7 @@ class ReleaseGuardTests(unittest.TestCase):
             self.project['books'][0]['status'] = 'digital_checked'
             self.project['books'][0]['artifacts'] = {key: 'missing.json' for key in
                 ('concept', 'story', 'storyboard', 'layout', 'page_manifest', 'reading_pdf', 'print_pdf', 'review', 'acceptance')}
-            (Path(tmp) / 'chapter.txt').write_text('source')
+            (Path(tmp) / 'chapter.txt').write_text('source',encoding='utf-8')
             try:
                 result = next_action(self.project, base_dir=Path(tmp))
             except TypeError:
@@ -60,7 +60,7 @@ class ReleaseGuardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             data = {'font_size': 1, 'pages': [{'number': 1, 'text': '小朋友', 'text_box_mm': [14, 20, 120, 40]}]}
-            (root / 'layout.json').write_text(json.dumps(data))
+            (root / 'layout.json').write_text(json.dumps(data),encoding='utf-8')
             with self.assertRaises(ValueError):
                 render_book(root / 'layout.json', root / 'reading.pdf')
             self.assertFalse((root / 'reading.pdf').exists())

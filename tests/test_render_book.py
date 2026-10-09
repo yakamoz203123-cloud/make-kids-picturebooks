@@ -14,7 +14,7 @@ class RenderTests(unittest.TestCase):
         self.data={'font_path':FONT,'page_mm':[148,210],'font_size':22,'target_dpi':300,'safe_margin_mm':10,'pages':[{'number':i,'text':'A bridge for us.','image':'art.png','image_box_mm':[14,70,120,120],'text_box_mm':[14,20,120,40]} for i in range(1,9)]}
     def tearDown(self):self.t.cleanup()
     def render(self):
-        p=self.root/'layout.json';p.write_text(json.dumps(self.data));return render_book(p,self.root/'out.pdf')
+        p=self.root/'layout.json';p.write_text(json.dumps(self.data),encoding='utf-8');return render_book(p,self.root/'out.pdf')
     def test_valid_pdf_with_embedded_font(self):
         self.assertIsNotNone(render_book,'排版尚未实现')
         result=self.render();reader=PdfReader(self.root/'out.pdf')
