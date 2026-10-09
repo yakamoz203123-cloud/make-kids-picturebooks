@@ -5,6 +5,8 @@ import os
 import tempfile
 from pathlib import Path
 
+from project_paths import normalize_relative_path
+
 STATES = ('assessed','planned','text','illustrated','laid_out','digital_checked','print_checked')
 AGES = ('3-4','5-7','8-10','5-6')
 REQUIRED_ARTIFACTS = ('concept','story','storyboard','layout','page_manifest','reading_pdf','print_pdf','review','acceptance')
@@ -77,10 +79,25 @@ def validate_project(data: dict) -> list[str]:
                 errors.append(f'册{i}: 试打通过需要用户实际反馈')
     return errors
 
+def _normalize_project_paths(path: Path, data: dict) -> None:
+    root = Path(path).resolve().parent
+    source = data.get('source')
+    if isinstance(source, dict) and source.get('path'):
+        source['path'] = normalize_relative_path(root, source['path'])
+    if data.get('characters_path'):
+        data['characters_path'] = normalize_relative_path(root, data['characters_path'])
+    for book in data.get('books', []):
+        if not isinstance(book, dict) or not isinstance(book.get('artifacts'), dict):
+            continue
+        for key, value in book['artifacts'].items():
+            book['artifacts'][key] = normalize_relative_path(root, value)
+
 def save_project(path: Path, data: dict) -> None:
+    path=Path(path)
+    _normalize_project_paths(path, data)
     errors=validate_project(data)
     if errors: raise ValueError('; '.join(errors))
-    path=Path(path); path.parent.mkdir(parents=True,exist_ok=True)
+    path.parent.mkdir(parents=True,exist_ok=True)
     fd,name=tempfile.mkstemp(prefix='.project-',dir=path.parent)
     try:
         with os.fdopen(fd,'w',encoding='utf-8') as f:
