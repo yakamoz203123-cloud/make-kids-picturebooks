@@ -15,4 +15,6 @@ python -X utf8 -m pip check
 python scripts/package_skill.py . dist/make-kids-picturebooks-v0.11.0-preview.zip --version 0.11.0-preview
 ```
 
+CI 运行指导、发布门禁和技能打包的聚焦测试；完整测试集包含渲染和外部环境相关用例，需在具备对应工具的环境中单独运行。
+
 仓库不包含用户书籍、儿童资料、私人角色照片或生成项目。发布包名为 `make-kids-picturebooks-v0.11.0-preview.zip`。
