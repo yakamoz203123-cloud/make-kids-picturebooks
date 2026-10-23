@@ -1,0 +1,24 @@
+name: picturebook-skill
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Compile scripts
+        run: python -X utf8 -m compileall scripts
+      - name: Run tests
+        run: python -X utf8 -m unittest discover -s tests -q
+      - name: Build release package
+        run: python scripts/package_skill.py . dist/make-kids-picturebooks-v0.11.0-preview.zip --version 0.11.0-preview
+      - name: Verify release manifest
+        run: python -c "import json; m=json.load(open('MANIFEST.json', encoding='utf-8')); assert m['version']=='0.11.0-preview'"

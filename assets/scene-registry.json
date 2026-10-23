@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "scenes": [
+    {
+      "scene_id": "SCENE-01",
+      "version": "v0.1",
+      "status": "registered-unverified",
+      "display_name": "家庭院子",
+      "stable_features": ["院门", "围墙", "树木", "花盆", "儿童活动区域"],
+      "anchors": ["child-scale-ground", "safe-observation-area"],
+      "allowed_variations": ["远景", "中景", "近景", "侧面", "俯视", "低机位", "时间和道具布置变化"],
+      "reference_assets": [],
+      "scientific_constraints": ["不把未知植物或危险边界作为儿童可随意进入的区域"],
+      "source_basis": "Phase 1 候选定义；没有正式背景图"
+    },
+    {
+      "scene_id": "SCENE-02",
+      "version": "v0.1",
+      "status": "registered-unverified",
+      "display_name": "家庭活动实验区",
+      "stable_features": ["活动桌", "墙面", "窗户", "地垫", "儿童活动空间"],
+      "anchors": ["child-scale-table", "safe-floor-area", "wall-focal-plane"],
+      "allowed_variations": ["远景", "中景", "近景", "侧面", "俯视", "低机位", "桌面物体布置变化"],
+      "reference_assets": [],
+      "scientific_constraints": [],
+      "source_basis": "Phase 1 候选定义；没有正式背景图"
+    },
+    {
+      "scene_id": "SCENE-03",
+      "version": "v0.1",
+      "status": "registered-unverified",
+      "display_name": "家庭生活空间",
+      "stable_features": ["客厅", "阅读角", "沙发", "儿童书架"],
+      "anchors": ["child-scale-reading-area", "safe-walkway"],
+      "allowed_variations": ["远景", "中景", "近景", "侧面", "俯视", "低机位", "家具和道具布置变化"],
+      "reference_assets": [],
+      "scientific_constraints": [],
+      "source_basis": "Phase 1 候选定义；没有正式背景图"
+    },
+    {
+      "scene_id": "SCENE-04",
+      "version": "v0.1",
+      "status": "registered-unverified",
+      "display_name": "自然探索区域",
+      "stable_features": ["草地", "小路", "树木", "花草", "自然观察空间"],
+      "anchors": ["safe-observation-area", "ground-focal-area", "adult-supervision-position"],
+      "allowed_variations": ["远景", "中景", "近景", "侧面", "俯视", "低机位", "天气和自然物布置变化"],
+      "reference_assets": [],
+      "scientific_constraints": ["儿童在成人陪同和明确安全范围内观察，不把未知自然物默认为可触碰或可品尝"],
+      "source_basis": "Phase 1 候选定义；没有正式背景图"
+    }
+  ]
+}

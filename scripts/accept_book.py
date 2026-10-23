@@ -9,7 +9,9 @@ import pymupdf as fitz
 from asset_registry import collect_declared_assets
 from project_paths import normalize_relative_path,resolve_project_file
 from validate_page_manifest import validate_page_manifest
+from layout_design import get_social_profile,image_matches_aspect_ratio,validate_layout_design,validate_layout_review
 from impose_booklet import booklet_pairs,MM
+from validate_exports import allowed_empty_pages,minimum_print_text_size,validation_errors
 
 def read(path):return json.loads(Path(path).read_text(encoding='utf-8'))
 def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -49,6 +51,158 @@ def quality_errors(layout):
     errors=[]
     if not isinstance(dpi,(float,int)) or dpi<minimum:errors.append(f'{profile}: 分辨率门槛至少{minimum}')
     if profile=='home-pilot' and not str(layout.get('quality_approval','')).strip():errors.append('家庭试制档位需要明确选择记录')
+    return errors
+
+def layout_design_errors(value,number,label):
+    errors=[]
+    if value is None:errors.append(f'页{number}: 旧项目缺少{label}，请迁移到layout-v1后再验收')
+    for message in validate_layout_design(value,True):errors.append(f'页{number}: {label}: {message}')
+    return errors
+
+def layout_review_errors(value,number,label='reading_pages'):
+    errors=[]
+    prefix=f'{label} {number}' if label=='reading_pages' else f'{label}{number}'
+    if value is None:errors.append(f'{prefix}: 缺少完整版式审核（layout_review）')
+    for message in validate_layout_review(value,True):errors.append(f'{prefix}: {message}')
+    return errors
+
+EDUCATION_GOAL_FIELDS=(
+    'core_knowledge',
+    'target_age_band',
+    'prior_experience',
+    'visible_relationship',
+    'knowledge_boundary',
+    'reading_observation',
+)
+METRIC_FIELDS=(
+    'wall_clock_ms',
+    'image_artifact_span_ms',
+    'model_wait_ms',
+    'image_generation_calls',
+    'attempts',
+    'failures',
+    'retries',
+    'rework_rounds',
+    'cache_hits',
+    'resume_events',
+    'output_quality',
+)
+EVIDENCE_DOMAINS=(
+    'engineering_evidence',
+    'content_evidence',
+    'visual_evidence',
+    'real_reading_evidence',
+)
+
+def education_goal_errors(value,age_band):
+    errors=[]
+    if not isinstance(value,dict):return ['education_goal必须是JSON对象']
+    if value.get('schema_version')!=1:errors.append('education_goal.schema_version必须为1')
+    for field in EDUCATION_GOAL_FIELDS:
+        if not isinstance(value.get(field),str) or not value[field].strip():errors.append(f'education_goal缺少{field}')
+    if value.get('target_age_band')!=age_band:errors.append('education_goal.target_age_band与绘本年龄段不一致')
+    return errors
+
+def metrics_errors(value):
+    errors=[]
+    if not isinstance(value,dict):return ['metrics必须是JSON对象']
+    for field in METRIC_FIELDS:
+        if field not in value:errors.append(f'metrics缺少{field}');continue
+        item=value[field]
+        if field=='output_quality':
+            if item not in ('pending','approved'):errors.append('metrics.output_quality必须是pending或approved')
+        elif item!='unknown' and (isinstance(item,bool) or not isinstance(item,(int,float)) or item<0):
+            errors.append(f'metrics.{field}必须是非负数或unknown')
+    return errors
+
+def evidence_errors(review):
+    errors=[]
+    for field in EVIDENCE_DOMAINS:
+        value=review.get(field)
+        if not isinstance(value,dict):errors.append(f'{field}: 缺少证据记录');continue
+        if value.get('status') not in ('passed','pending','failed'):errors.append(f'{field}: status必须是passed、pending或failed')
+        if not isinstance(value.get('evidence'),str) or not value['evidence'].strip():errors.append(f'{field}: 缺少evidence')
+        if value.get('status')=='failed':errors.append(f'{field}: 证据状态不能是failed')
+        if field!='real_reading_evidence' and value.get('status')!='passed':errors.append(f'{field}: 数字验收需要passed')
+    return errors
+
+def contact_sheet_review_errors(value,track):
+    errors=[]
+    if not isinstance(value,dict):return ['contact_sheet_review: 缺少整书缩略图审核记录']
+    if value.get('status')!='passed':errors.append('contact_sheet_review: status必须是passed')
+    if not isinstance(value.get('evidence'),str) or not value['evidence'].strip():errors.append('contact_sheet_review: 缺少evidence')
+    if not isinstance(value.get('reviewer'),str) or not value['reviewer'].strip():errors.append('contact_sheet_review: 缺少reviewer')
+    if not isinstance(value.get('reviewed_at'),str) or not value['reviewed_at'].strip():errors.append('contact_sheet_review: 缺少reviewed_at')
+    image_path=value.get('image_path')
+    if not isinstance(image_path,(str,Path)) or not str(image_path).strip():return errors+['contact_sheet_review: 缺少图片路径']
+    try:path=track(image_path)
+    except (OSError,ValueError,TypeError) as exc:return errors+[f'contact_sheet_review: 图片不可用: {exc}']
+    from PIL import Image
+    try:
+        with Image.open(path) as image:image.verify()
+        with Image.open(path) as image:image.load()
+    except (OSError,ValueError) as exc:errors.append(f'contact_sheet_review: 图片不可读取: {exc}')
+    return errors
+
+def social_render_errors(record,number,design,source_image,track):
+    errors=[]
+    label=f'社媒页{number}'
+    if not isinstance(record,dict):return [f'{label}: 缺少社媒渲染记录']
+    errors.extend(layout_review_errors(record.get('layout_review'),number,'社媒页'))
+    social=design.get('social_layout') if isinstance(design,dict) else None
+    if not isinstance(social,dict):return [f'{label}: 缺少social_layout，无法验证社媒输出']
+    profile=social.get('profile')
+    profile_config=get_social_profile(profile)
+    if record.get('page')!=number:errors.append(f'{label}: 页码不连续')
+    if record.get('status') not in ('rendered','passed'):errors.append(f'{label}: 渲染状态必须是rendered或passed')
+    if profile_config is None:
+        errors.append(f'{label}: profile必须是受支持的社媒profile')
+    else:
+        canvas=profile_config['canvas']
+        source_aspect_ratio=profile_config['source_aspect_ratio']
+        if record.get('canvas')!=canvas:errors.append(f'{label}: canvas必须是{canvas["width_px"]}×{canvas["height_px"]}')
+        if record.get('source_aspect_ratio')!=source_aspect_ratio:errors.append(f'{label}: 源图比例必须是{source_aspect_ratio}')
+    if record.get('profile')!=profile:errors.append(f'{label}: profile与layout.json不一致')
+    for field in ('subject_safe_area','text_safe_area'):
+        if record.get(field)!=social.get(field):errors.append(f'{label}: {field}与layout.json不一致')
+    if source_image is None or not source_image.is_file():
+        errors.append(f'{label}: 源图文件不可用')
+    else:
+        from PIL import Image
+        try:
+            with Image.open(source_image) as image:
+                if profile_config is not None and not image_matches_aspect_ratio(image.width,image.height,profile_config['source_aspect_ratio']):errors.append(f'{label}: 源图必须是{profile_config["source_aspect_ratio"]}，禁止用印刷页中心裁切冒充')
+        except (OSError,ValueError) as exc:errors.append(f'{label}: 源图不可读取: {exc}')
+    output_value=record.get('output_path')
+    if not isinstance(output_value,(str,Path)) or not str(output_value).strip():
+        errors.append(f'{label}: 缺少渲染文件路径');return errors
+    try:output=track(output_value)
+    except (OSError,ValueError,TypeError) as exc:
+        errors.append(f'{label}: 渲染文件不可用: {exc}');return errors
+    from PIL import Image
+    try:
+        with Image.open(output) as image:
+            if profile_config is not None and image.size!=(profile_config['canvas']['width_px'],profile_config['canvas']['height_px']):errors.append(f'{label}: 渲染文件必须是{profile_config["canvas"]["width_px"]}×{profile_config["canvas"]["height_px"]}')
+    except (OSError,ValueError) as exc:errors.append(f'{label}: 渲染文件不可读取: {exc}')
+    return errors
+
+def social_profile_errors(pages,social_records):
+    errors=[];profiles=[]
+    for number,page in enumerate(pages,1):
+        design=page.get('layout_design') if isinstance(page,dict) else None
+        social=design.get('social_layout') if isinstance(design,dict) else None
+        profile=social.get('profile') if isinstance(social,dict) else None
+        if not isinstance(profile,str) or not profile.strip():
+            errors.append(f'页{number}: social_layout.profile必须是非空值')
+        else:profiles.append(profile)
+    if isinstance(social_records,list):
+        for number,record in enumerate(social_records,1):
+            profile=record.get('profile') if isinstance(record,dict) else None
+            if not isinstance(profile,str) or not profile.strip():
+                errors.append(f'社媒页{number}: profile必须是非空值')
+            else:profiles.append(profile)
+    if profiles and len(set(profiles))!=1:
+        errors.append('本次check_book的全部layout pages和social_pages必须绑定同一个非空profile')
     return errors
 
 def verify_receipt(project,book,base):
@@ -96,11 +250,13 @@ def check_book(project_path,book_id):
     def track(path,parent=base):return track_resolved(resolve_project_file(parent,path))
     def artifact(key):return track(artifacts[key])
     try:
-        for key in ('concept','story','storyboard','layout','page_manifest','reading_pdf','print_pdf','review'):artifact(key)
+        approved_characters_dir = None
+        for key in ('concept','education_goal','story','storyboard','layout','page_manifest','reading_pdf','print_pdf','review','metrics'):artifact(key)
         source_path=track(project['source']['path'])
         if not project.get('characters_path'):errors.append('缺少角色参考目录')
         else:
             chars=resolve_project_file(base,project['characters_path'])
+            approved_characters_dir=chars.resolve()
             refs=[p for p in chars.rglob('*') if p.is_file()]
             if not refs:errors.append('角色参考文件缺失')
             for p in refs:track_resolved(p)
@@ -108,6 +264,10 @@ def check_book(project_path,book_id):
         manifest_path=artifact('page_manifest');manifest=read(manifest_path)
         storyboard=read(artifact('storyboard'));storyboard=storyboard.get('pages',[]) if isinstance(storyboard,dict) else storyboard
         review=read(artifact('review'))
+        errors.extend(education_goal_errors(read(artifact('education_goal')),book.get('age_band')))
+        errors.extend(metrics_errors(read(artifact('metrics'))))
+        errors.extend(evidence_errors(review))
+        errors.extend(contact_sheet_review_errors(review.get('contact_sheet_review'),track))
         for field,label in (('font_path','字体'),('font_license_path','字体许可证'),('font_provenance_path','字体来源证明')):
             value=layout.get(field)
             if not isinstance(value,(str,Path)) or not str(value).strip():errors.append(f'验收版面须保存项目内{label}路径')
@@ -118,11 +278,13 @@ def check_book(project_path,book_id):
         if manifest.get('book_id')!=book_id or concept.get('book_id')!=book_id:errors.append('册编号不一致')
         if book.get('source_version')!=project['source']['version'] or book.get('characters_version')!=project['characters_version']:errors.append('项目版本已变化')
         errors.extend(validate_page_manifest(manifest,manifest_path.parent,True))
-        pages=layout['pages'];n=len(pages);pairs=booklet_pairs(n)
+        pages=layout.get('pages');n=len(pages) if isinstance(pages,list) else 0;pairs=booklet_pairs(n)
+        if not isinstance(pages,list) or not pages:errors.append('layout.json缺少可验收的pages数组');pages=[]
         errors.extend(structure_errors(pages))
         story=normal(artifact('story').read_text(encoding='utf-8'))
         errors.extend(story_text_errors(pages,story))
         if len(storyboard)!=n or len(manifest['pages'])!=n:errors.append('分镜、清单与版面页数不一致')
+        source_images={}
         for i,page in enumerate(pages):
             number=i+1
             if page.get('number')!=number:errors.append(f'页{number}: 页码不连续')
@@ -131,15 +293,36 @@ def check_book(project_path,book_id):
             saved=manifest['pages'][i];board=storyboard[i]
             if page.get('text')!=board.get('text'):errors.append(f'页{number}: 正文与分镜不一致')
             if saved.get('text_area')!=page.get('text_box_mm'):errors.append(f'页{number}: 文字区域不一致')
+            if saved.get('text')!=page.get('text'):errors.append(f'页{number}: 清单正文与layout.json不一致')
+            if page.get('layout_design')!=saved.get('layout_design'):errors.append(f'页{number}: 清单与layout.json版式不一致')
+            errors.extend(layout_design_errors(page.get('layout_design'),number,'layout_design'))
+            errors.extend(layout_design_errors(saved.get('layout_design'),number,'清单layout_design'))
             if saved.get('characters_version')!=book['characters_version']:errors.append(f'页{number}: 角色版本不一致')
             track(saved['current_prompt_path'],manifest_path.parent)
             selected=track(saved['current_image_path'],manifest_path.parent)
+            reference_value=saved.get('character_reference_path')
+            if isinstance(reference_value,(str,Path)) and str(reference_value).strip():
+                try:
+                    reference=resolve_project_file(manifest_path.parent,reference_value)
+                except (OSError,ValueError) as exc:
+                    errors.append(f'页{number}: 角色参考路径不可用: {exc}')
+                else:
+                    if not reference.is_file():
+                        errors.append(f'页{number}: 角色参考文件缺失: {reference_value}')
+                    elif approved_characters_dir is not None:
+                        try:
+                            reference.relative_to(approved_characters_dir)
+                        except ValueError:
+                            errors.append(f'页{number}: 角色参考不在当前批准目录 {project.get("characters_path")}')
+                        else:
+                            track_resolved(reference)
             kind=page.get('kind')
             if kind not in ('cover','story','parents','back','blank'):errors.append(f'页{number}: 缺少有效页面类型')
             if kind in ('cover','story','back') and not page.get('image'):errors.append(f'页{number}: 缺少实际插画')
             if kind=='story' and (page.get('image_role')!='background' or page.get('text_area_reviewed') is not True):errors.append(f'页{number}: 未确认画面中文字区域')
             if page.get('image'):
                 actual=track(page['image'],layout_path.parent)
+                source_images[number]=actual
                 if selected!=actual:errors.append(f'页{number}: 清单选图与排版选图不一致')
                 from PIL import Image
                 with Image.open(actual) as img:pw,ph=img.size
@@ -153,10 +336,24 @@ def check_book(project_path,book_id):
                 if record.get('image_path'):track(record['image_path'])
                 else:errors.append(f'{field} {k}: 缺少审核渲染图')
         reviewed('reading_pages',n,'page');reviewed('print_sides',len(pairs),'side')
+        reading_records=review.get('reading_pages',[])
+        if isinstance(reading_records,list):
+            for number,record in enumerate(reading_records,1):errors.extend(layout_review_errors(record.get('layout_review') if isinstance(record,dict) else None,number))
+        social_records=review.get('social_pages')
+        if not isinstance(social_records,list) or len(social_records)!=n:
+            errors.append('社媒输出未逐页记录渲染结果')
+        else:
+            for number in range(1,n+1):
+                record=next((item for item in social_records if isinstance(item,dict) and item.get('page')==number),None)
+                page=pages[number-1]
+                errors.extend(social_render_errors(record,number,page.get('layout_design'),source_images.get(number),track))
+        errors.extend(social_profile_errors(pages,social_records))
         if review.get('unresolved_digital_defects'):errors.append('仍有未解决数字缺陷')
-        reading=fitz.open(artifact('reading_pdf'));printing=fitz.open(artifact('print_pdf'))
-        if len(reading)!=n or len(printing)!=len(pairs):errors.append('最终PDF页数不符')
         dims=layout.get('page_mm',[148,210])
+        reading_path=artifact('reading_pdf');printing_path=artifact('print_pdf')
+        errors.extend(validation_errors(reading_path,printing_path,[page.get('text','') for page in pages],dims,minimum_print_text_size(layout),allowed_empty_pages(layout)))
+        reading=fitz.open(reading_path);printing=fitz.open(printing_path)
+        if len(reading)!=n or len(printing)!=len(pairs):errors.append('最终PDF页数不符')
         for i,page in enumerate(reading):
             if i>=n:break
             if normal(page.get_text())!=normal(pages[i]['text']):errors.append(f'阅读页{i+1}: 可提取正文不一致')

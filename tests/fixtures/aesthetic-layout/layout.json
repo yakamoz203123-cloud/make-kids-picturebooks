@@ -1,0 +1,259 @@
+{
+  "title": "小桥的秘密",
+  "page_mm": [
+    148,
+    210
+  ],
+  "font_path": "../../../assets/kidsbook-print.ttf",
+  "font_size": 22,
+  "safe_margin_mm": 10,
+  "target_dpi": 300,
+  "quality_profile": "print",
+  "minimum_print_text_size_pt": 18,
+  "pages": [
+    {
+      "number": 1,
+      "kind": "cover",
+      "text": "小桥的秘密",
+      "image": "images/page-01.png",
+      "image_box_mm": [
+        14,
+        65,
+        120,
+        120
+      ],
+      "text_box_mm": [
+        14,
+        16,
+        120,
+        38
+      ],
+      "image_role": "inset",
+      "layout_design": {
+        "layout_style_version": "layout-v1",
+        "layout_mode": "scene-integrated",
+        "text_anchor": "bottom-left",
+        "text_treatment": "natural-space",
+        "text_align": "center",
+        "max_lines": 2,
+        "focal_point": "小桥旁举起木板的孩子",
+        "text_safe_area": "画面下方的浅色沙地",
+        "avoid_covering": [
+          "孩子的脸",
+          "小桥的拱面"
+        ],
+        "page_rhythm": "establishing",
+        "palette_token": "warm-paper",
+        "status": "passed",
+        "social_layout": {
+          "profile": "social-vertical-9x16",
+          "canvas": {
+            "width_px": 1080,
+            "height_px": 1920
+          },
+          "subject_safe_area": [
+            0.08,
+            0.10,
+            0.84,
+            0.62
+          ],
+          "text_safe_area": [
+            0.08,
+            0.76,
+            0.84,
+            0.14
+          ],
+          "avoid_regions": [
+            "top-ui",
+            "bottom-ui"
+          ],
+          "source_aspect_ratio": "9:16",
+          "status": "passed"
+        }
+      }
+    },
+    {
+      "number": 2,
+      "kind": "story",
+      "text": "米米把三块木板排在小河边。",
+      "image": "images/page-02.png",
+      "image_box_mm": [
+        14,
+        65,
+        120,
+        120
+      ],
+      "text_box_mm": [
+        14,
+        16,
+        120,
+        48
+      ],
+      "image_role": "inset",
+      "layout_design": {
+        "layout_style_version": "layout-v1",
+        "layout_mode": "soft-card",
+        "text_anchor": "bottom-left",
+        "text_treatment": "soft-card",
+        "text_align": "left",
+        "max_lines": 4,
+        "focal_point": "米米把三块木板排成一列",
+        "text_safe_area": "画面下方的浅色河滩",
+        "avoid_covering": [
+          "米米的脸",
+          "三块木板"
+        ],
+        "page_rhythm": "action",
+        "palette_token": "cool-sky",
+        "status": "passed",
+        "social_layout": {
+          "profile": "social-vertical-9x16",
+          "canvas": {
+            "width_px": 1080,
+            "height_px": 1920
+          },
+          "subject_safe_area": [
+            0.08,
+            0.10,
+            0.84,
+            0.62
+          ],
+          "text_safe_area": [
+            0.08,
+            0.76,
+            0.84,
+            0.14
+          ],
+          "avoid_regions": [
+            "top-ui",
+            "bottom-ui"
+          ],
+          "source_aspect_ratio": "9:16",
+          "status": "passed"
+        }
+      }
+    },
+    {
+      "number": 3,
+      "kind": "story",
+      "text": "木板一块接一块，变成了跨过小河的路。",
+      "image": "images/page-03.png",
+      "image_box_mm": [
+        14,
+        65,
+        120,
+        120
+      ],
+      "text_box_mm": [
+        14,
+        16,
+        120,
+        48
+      ],
+      "image_role": "inset",
+      "layout_design": {
+        "layout_style_version": "layout-v1",
+        "layout_mode": "narrative-band",
+        "text_anchor": "bottom-left",
+        "text_treatment": "narrative-band",
+        "text_align": "left",
+        "max_lines": 4,
+        "focal_point": "木板首尾相接形成小桥",
+        "text_safe_area": "画面下方的浅色草地",
+        "avoid_covering": [
+          "小桥的连接处",
+          "孩子们的脚步"
+        ],
+        "page_rhythm": "turn",
+        "palette_token": "soft-leaf",
+        "status": "passed",
+        "social_layout": {
+          "profile": "social-vertical-9x16",
+          "canvas": {
+            "width_px": 1080,
+            "height_px": 1920
+          },
+          "subject_safe_area": [
+            0.08,
+            0.10,
+            0.84,
+            0.62
+          ],
+          "text_safe_area": [
+            0.08,
+            0.76,
+            0.84,
+            0.14
+          ],
+          "avoid_regions": [
+            "top-ui",
+            "bottom-ui"
+          ],
+          "source_aspect_ratio": "9:16",
+          "status": "passed"
+        }
+      }
+    },
+    {
+      "number": 4,
+      "kind": "back",
+      "text": "一起走，路就出现了。",
+      "image": "images/page-04.png",
+      "image_box_mm": [
+        14,
+        65,
+        120,
+        120
+      ],
+      "text_box_mm": [
+        14,
+        16,
+        120,
+        38
+      ],
+      "image_role": "inset",
+      "layout_design": {
+        "layout_style_version": "layout-v1",
+        "layout_mode": "scene-integrated",
+        "text_anchor": "bottom-left",
+        "text_treatment": "natural-space",
+        "text_align": "center",
+        "max_lines": 2,
+        "focal_point": "孩子们走过小桥的背影",
+        "text_safe_area": "画面下方的浅色河岸",
+        "avoid_covering": [
+          "孩子们的背影",
+          "小桥"
+        ],
+        "page_rhythm": "resolution",
+        "palette_token": "warm-paper",
+        "status": "passed",
+        "social_layout": {
+          "profile": "social-vertical-9x16",
+          "canvas": {
+            "width_px": 1080,
+            "height_px": 1920
+          },
+          "subject_safe_area": [
+            0.08,
+            0.10,
+            0.84,
+            0.62
+          ],
+          "text_safe_area": [
+            0.08,
+            0.76,
+            0.84,
+            0.14
+          ],
+          "avoid_regions": [
+            "top-ui",
+            "bottom-ui"
+          ],
+          "source_aspect_ratio": "9:16",
+          "status": "passed"
+        }
+      }
+    }
+  ]
+}

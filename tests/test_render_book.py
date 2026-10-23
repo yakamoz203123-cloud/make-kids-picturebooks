@@ -118,6 +118,10 @@ class RenderTests(unittest.TestCase):
     def test_unknown_image_role_is_rejected(self):
         self.data['pages'][0]['image_role']='anything'
         with self.assertRaisesRegex(ValueError,'图像角色'):self.render()
+    def test_layout_mode_requires_layout_design_for_export(self):
+        self.data['pages'][0]['layout_mode']='soft-card'
+        with self.assertRaisesRegex(ValueError,'layout_design'):
+            self.render()
     def test_no_partial_output_or_overwrite(self):
         self.assertIsNotNone(render_book)
         self.data['pages'][-1]['image']='missing.png'

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "shot_ids": [
+    "SHOT-OBSERVE-01",
+    "SHOT-CLOSE-01",
+    "SHOT-WIDE-01"
+  ],
+  "interaction_requirements": {
+    "DUO-": {
+      "required_character_ids": ["xiaoxiong", "xiaomeng"],
+      "cardinality": {"min": 2, "max": 2}
+    },
+    "PARENT-": {
+      "required_character_ids": ["mother"],
+      "required_any_character_ids": ["xiaoxiong", "xiaomeng"],
+      "cardinality": {"min": 2}
+    }
+  }
+}

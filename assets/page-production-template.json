@@ -1,0 +1,53 @@
+{
+  "production_schema": "asset-bound-page-v1",
+  "page_id": "PAGE-01",
+  "page_version": "PAGE-01-v1",
+  "story_version": "story-v1",
+  "character_asset_bundle": "core-characters-v1.2",
+  "character_asset_version": "v1.2",
+  "profile": "xiaohongshu-feed-3x4",
+  "characters": [
+    {
+      "character_id": "CHAR-GIRL-01",
+      "outfit_id": "G-01",
+      "expression_id": "G-EX-02",
+      "pose_id": "G-PO-01",
+      "angle_id": "ANG-01"
+    }
+  ],
+  "style_master_id": "STYLE-CORE-01",
+  "style_master_version": "v1.2",
+  "style_master_content_hash": "a7acceeacd62b53de21c0fce89603383a5863ec243b26c79d612f62d8ca9bbf9",
+  "shot_id": "SHOT-OBSERVE-01",
+  "interaction_id": null,
+  "family_interaction_id": null,
+  "page_delta": {
+    "scene": "[specific child-scale setting]",
+    "knowledge_evidence": "[visible evidence a child can observe]",
+    "composition": "[subject placement and focal object]",
+    "continuity": "[connection to the previous page]"
+  },
+  "visual_direction": {
+    "story_task": "[one narrative task for this page]",
+    "visual_subject": "[what the child should notice first]",
+    "must_show": ["[required action or evidence]"],
+    "must_not_show": ["[specific wrong action or unwanted object]"],
+    "visual_result": "[visible result that must appear]",
+    "science_evidence": "[observable scientific relationship]",
+    "composition_reason": "[why this shot and layout serve the page]"
+  },
+  "scene_ref": null,
+  "props": [],
+  "asset_refs": [],
+  "text": "[page text]",
+  "text_safe_area": [72, 72, 480, 180],
+  "continuity": {
+    "entry": "[what carries into this page]",
+    "exit": "[what the next page receives]"
+  },
+  "source_prompt_hash": "[sha256 of approved source prompt]",
+  "resolved_asset_hash": "[sha256 of resolved asset selection]",
+  "current_image_path": null,
+  "review_status": "planning",
+  "declared_aspect_ratio": "3:4"
+}

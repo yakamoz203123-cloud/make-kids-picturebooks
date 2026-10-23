@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "receipt_type": "style-bundle-integrity-receipt",
+  "bundle_id": "style-06-v0.1",
+  "style_id": "STYLE-06",
+  "version": "v0.1",
+  "files": {
+    "manifest.json": "ea8fbd29c8f425f7edd8a3fb614f2b724f31784dac9e03968e7a72d57dddfaf0",
+    "approval.json": "7a18c2a4e4427b81e5d87b3e4678e20e38fae5da5a8b19b0a33d46d23bf2b5eb",
+    "reference/STYLE06-TRIO-01.png": "b39a1ce01de25d7532e2cc1d8e44ae67926f61f6db36ff34d670022cb15b77ac"
+  },
+  "integrity_verified": true,
+  "digital_signature": false,
+  "note": "SHA-256 content receipt; not a digital signature.",
+  "receipt_sha256": "fae03f8a1614ef30b37a133d3255274324219b17101d73280e2786b3b280c154"
+}

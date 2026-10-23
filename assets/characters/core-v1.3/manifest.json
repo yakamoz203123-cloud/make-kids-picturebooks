@@ -1,0 +1,1858 @@
+{
+  "schema_version": 1,
+  "bundle_id": "core-characters-v1.3",
+  "version": "v1.3",
+  "status": "approved-reference",
+  "scope": "reusable-cartoon-character-assets",
+  "visual_reference": {
+    "path": "reference/core-character-assets-v1.2.png",
+    "reference_image": "reference/core-character-assets-v1.2.png",
+    "source_note": "The supplied v1.2 character asset overview is the highest-priority visual reference. It is a stylized cartoon reference, not a raw child photograph.",
+    "do_not_redesign": true,
+    "reference_sha256": "fb16e77d104bc8fb328dab096c4bd83c04245c5310a18a4b6efee404e438af07"
+  },
+  "characters": [
+    {
+      "character_id": "xiaoxiong",
+      "display_name": "小熊",
+      "role": "女孩主角",
+      "age_presentation": "3—4岁学龄前女孩",
+      "identity_asset_id": "G-ID-01",
+      "stable_features": [
+        "双低马尾",
+        "红色花朵发夹",
+        "圆脸",
+        "大眼睛",
+        "笑容和酒窝",
+        "温柔、好奇、认真、爱观察"
+      ],
+      "palette": [
+        "粉色",
+        "红色",
+        "暖白"
+      ],
+      "default_outfit": "G-01",
+      "reference_region": "left character panel and girl rows in the supplied overview",
+      "version": "v1.3",
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_sha256": "1437a1cab704893850a6d3575df283d02fa5abd58ef38181a162f38fa7f5c535"
+    },
+    {
+      "character_id": "xiaomeng",
+      "display_name": "小猛",
+      "role": "男孩主角",
+      "age_presentation": "3—4岁学龄前男孩",
+      "identity_asset_id": "B-ID-01",
+      "stable_features": [
+        "蓬松短棕发",
+        "圆脸",
+        "大眼睛",
+        "开朗笑容",
+        "活泼、好奇、勇于尝试、爱提问"
+      ],
+      "palette": [
+        "蓝色",
+        "绿色",
+        "黄色"
+      ],
+      "default_outfit": "B-01",
+      "reference_region": "middle character panel and boy rows in the supplied overview",
+      "version": "v1.3",
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_sha256": "d022cbb87c6d24e0adb9c1e22d3830854fb7e322cdfe59512e850d16184550cc"
+    },
+    {
+      "character_id": "mother",
+      "display_name": "妈妈",
+      "role": "成人辅助角色",
+      "age_presentation": "温和可靠的成人照护者",
+      "identity_asset_id": "M-ID-01",
+      "stable_features": [
+        "柔和的低马尾或盘发",
+        "温暖笑容",
+        "成人身体比例",
+        "耐心、支持、引导"
+      ],
+      "palette": [
+        "米白",
+        "棕色",
+        "温暖中性色"
+      ],
+      "default_outfit": "M-01",
+      "reference_region": "right character panel and mother rows in the supplied overview",
+      "version": "v1.3",
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_sha256": "34368c46e6db6d5893161fdcba30b6ce2f769d1aba79f0ee610b981bbd5e5e8c"
+    }
+  ],
+  "assets": [
+    {
+      "asset_id": "G-ID-01",
+      "character_id": "xiaoxiong",
+      "asset_type": "identity",
+      "description": "小熊 v1.2 固定角色身份：双低马尾、红色花朵发夹、圆脸大眼睛、温柔好奇的3—4岁女孩。",
+      "usage": "Every page that includes 小熊; bind before selecting page-specific changes.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2",
+      "approved_for_production": true
+    },
+    {
+      "asset_id": "B-ID-01",
+      "character_id": "xiaomeng",
+      "asset_type": "identity",
+      "description": "小猛 v1.2 固定角色身份：蓬松短棕发、圆脸大眼睛、开朗笑容、活泼勇敢的3—4岁男孩。",
+      "usage": "Every page that includes 小猛; bind before selecting page-specific changes.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2",
+      "approved_for_production": true
+    },
+    {
+      "asset_id": "M-ID-01",
+      "character_id": "mother",
+      "asset_type": "identity",
+      "description": "妈妈 v1.2 固定成人辅助角色：柔和发型、温暖笑容、耐心支持并引导孩子。",
+      "usage": "Every page that includes 妈妈; bind before selecting page-specific changes.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2",
+      "approved_for_production": true
+    },
+    {
+      "asset_id": "G-EX-01",
+      "character_id": "xiaoxiong",
+      "asset_type": "expression",
+      "description": "开心",
+      "usage": "Use when 小熊 experiences clear joy.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-EX-02",
+      "character_id": "xiaoxiong",
+      "asset_type": "expression",
+      "description": "好奇",
+      "usage": "Use for looking closely and wanting to know more.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-EX-03",
+      "character_id": "xiaoxiong",
+      "asset_type": "expression",
+      "description": "惊讶",
+      "usage": "Use when a visible result is unexpected.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-EX-04",
+      "character_id": "xiaoxiong",
+      "asset_type": "expression",
+      "description": "思考",
+      "usage": "Use during a pause before a hypothesis or action.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-EX-05",
+      "character_id": "xiaoxiong",
+      "asset_type": "expression",
+      "description": "疑问",
+      "usage": "Use when 小熊 asks or visibly wonders about something.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-EX-06",
+      "character_id": "xiaoxiong",
+      "asset_type": "expression",
+      "description": "专注",
+      "usage": "Use during careful observation or manipulation.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-EX-07",
+      "character_id": "xiaoxiong",
+      "asset_type": "expression",
+      "description": "兴奋",
+      "usage": "Use when anticipation or discovery is visibly energetic.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-EX-08",
+      "character_id": "xiaoxiong",
+      "asset_type": "expression",
+      "description": "小担心",
+      "usage": "Use for mild, age-appropriate concern without fear.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-EX-09",
+      "character_id": "xiaoxiong",
+      "asset_type": "expression",
+      "description": "得意",
+      "usage": "Use after a child notices or completes something successfully.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-EX-10",
+      "character_id": "xiaoxiong",
+      "asset_type": "expression",
+      "description": "等待",
+      "usage": "Use while waiting for a change or adult response.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-EX-11",
+      "character_id": "xiaoxiong",
+      "asset_type": "expression",
+      "description": "发现",
+      "usage": "Use at the moment of noticing a meaningful visual result.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-EX-12",
+      "character_id": "xiaoxiong",
+      "asset_type": "expression",
+      "description": "理解",
+      "usage": "Use when a previously unclear relationship becomes clear.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-EX-01",
+      "character_id": "xiaomeng",
+      "asset_type": "expression",
+      "description": "开心",
+      "usage": "Use when 小猛 experiences clear joy.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-EX-02",
+      "character_id": "xiaomeng",
+      "asset_type": "expression",
+      "description": "好奇",
+      "usage": "Use for looking closely and asking what happens next.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-EX-03",
+      "character_id": "xiaomeng",
+      "asset_type": "expression",
+      "description": "惊讶",
+      "usage": "Use when a visible result is unexpected.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-EX-04",
+      "character_id": "xiaomeng",
+      "asset_type": "expression",
+      "description": "思考",
+      "usage": "Use during a pause before a hypothesis or action.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-EX-05",
+      "character_id": "xiaomeng",
+      "asset_type": "expression",
+      "description": "疑问",
+      "usage": "Use when 小猛 asks or visibly wonders about something.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-EX-06",
+      "character_id": "xiaomeng",
+      "asset_type": "expression",
+      "description": "专注",
+      "usage": "Use during careful observation or manipulation.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-EX-07",
+      "character_id": "xiaomeng",
+      "asset_type": "expression",
+      "description": "兴奋",
+      "usage": "Use when anticipation or discovery is visibly energetic.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-EX-08",
+      "character_id": "xiaomeng",
+      "asset_type": "expression",
+      "description": "小担心",
+      "usage": "Use for mild, age-appropriate concern without fear.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-EX-09",
+      "character_id": "xiaomeng",
+      "asset_type": "expression",
+      "description": "得意",
+      "usage": "Use after a child notices or completes something successfully.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-EX-10",
+      "character_id": "xiaomeng",
+      "asset_type": "expression",
+      "description": "等待",
+      "usage": "Use while waiting for a change or adult response.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-EX-11",
+      "character_id": "xiaomeng",
+      "asset_type": "expression",
+      "description": "发现",
+      "usage": "Use at the moment of noticing a meaningful visual result.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-EX-12",
+      "character_id": "xiaomeng",
+      "asset_type": "expression",
+      "description": "理解",
+      "usage": "Use when a previously unclear relationship becomes clear.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-EX-01",
+      "character_id": "mother",
+      "asset_type": "expression",
+      "description": "微笑",
+      "usage": "Use for a calm, welcoming adult presence.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-EX-02",
+      "character_id": "mother",
+      "asset_type": "expression",
+      "description": "温柔",
+      "usage": "Use for patient reassurance and care.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-EX-03",
+      "character_id": "mother",
+      "asset_type": "expression",
+      "description": "鼓励",
+      "usage": "Use when inviting a child to try safely.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-EX-04",
+      "character_id": "mother",
+      "asset_type": "expression",
+      "description": "倾听",
+      "usage": "Use while receiving a child's question or observation.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-EX-05",
+      "character_id": "mother",
+      "asset_type": "expression",
+      "description": "认真",
+      "usage": "Use while demonstrating or checking a result.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-EX-06",
+      "character_id": "mother",
+      "asset_type": "expression",
+      "description": "思考",
+      "usage": "Use while considering a child-appropriate explanation.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-EX-07",
+      "character_id": "mother",
+      "asset_type": "expression",
+      "description": "担心",
+      "usage": "Use only for mild safety or care concern.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-EX-08",
+      "character_id": "mother",
+      "asset_type": "expression",
+      "description": "引导",
+      "usage": "Use while directing attention without taking over the discovery.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-PO-01",
+      "character_id": "xiaoxiong",
+      "asset_type": "pose",
+      "description": "观察",
+      "usage": "Use for looking closely at a knowledge object.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-PO-02",
+      "character_id": "xiaoxiong",
+      "asset_type": "pose",
+      "description": "趴在桌边观察",
+      "usage": "Use for a close, child-level table investigation.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-PO-03",
+      "character_id": "xiaoxiong",
+      "asset_type": "pose",
+      "description": "指向物体",
+      "usage": "Use to make the observation target explicit.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-PO-04",
+      "character_id": "xiaoxiong",
+      "asset_type": "pose",
+      "description": "拿起物体",
+      "usage": "Use for a safe, story-relevant manipulation.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-PO-05",
+      "character_id": "xiaoxiong",
+      "asset_type": "pose",
+      "description": "放下物体",
+      "usage": "Use after handling or comparing an object.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-PO-06",
+      "character_id": "xiaoxiong",
+      "asset_type": "pose",
+      "description": "轻轻触摸",
+      "usage": "Use when tactile exploration is safe and relevant.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-PO-07",
+      "character_id": "xiaoxiong",
+      "asset_type": "pose",
+      "description": "比较两个物体",
+      "usage": "Use to show side-by-side comparison.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-PO-08",
+      "character_id": "xiaoxiong",
+      "asset_type": "pose",
+      "description": "和另一个孩子一起观察",
+      "usage": "Use only when the paired scene has an explicit shared focus.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-PO-09",
+      "character_id": "xiaoxiong",
+      "asset_type": "pose",
+      "description": "等待变化",
+      "usage": "Use for a visible waiting beat in the experiment or story.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-PO-10",
+      "character_id": "xiaoxiong",
+      "asset_type": "pose",
+      "description": "发现变化",
+      "usage": "Use at the visual turning point of an observation.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-PO-11",
+      "character_id": "xiaoxiong",
+      "asset_type": "pose",
+      "description": "惊喜反应",
+      "usage": "Use after the result is visible and safe.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-PO-12",
+      "character_id": "xiaoxiong",
+      "asset_type": "pose",
+      "description": "思考",
+      "usage": "Use for a quiet reasoning beat.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-PO-01",
+      "character_id": "xiaomeng",
+      "asset_type": "pose",
+      "description": "观察",
+      "usage": "Use for looking closely at a knowledge object.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-PO-02",
+      "character_id": "xiaomeng",
+      "asset_type": "pose",
+      "description": "趴在桌边观察",
+      "usage": "Use for a close, child-level table investigation.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-PO-03",
+      "character_id": "xiaomeng",
+      "asset_type": "pose",
+      "description": "指向物体",
+      "usage": "Use to make the observation target explicit.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-PO-04",
+      "character_id": "xiaomeng",
+      "asset_type": "pose",
+      "description": "拿起物体",
+      "usage": "Use for a safe, story-relevant manipulation.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-PO-05",
+      "character_id": "xiaomeng",
+      "asset_type": "pose",
+      "description": "放下物体",
+      "usage": "Use after handling or comparing an object.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-PO-06",
+      "character_id": "xiaomeng",
+      "asset_type": "pose",
+      "description": "轻轻触摸",
+      "usage": "Use when tactile exploration is safe and relevant.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-PO-07",
+      "character_id": "xiaomeng",
+      "asset_type": "pose",
+      "description": "比较两个物体",
+      "usage": "Use to show side-by-side comparison.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-PO-08",
+      "character_id": "xiaomeng",
+      "asset_type": "pose",
+      "description": "和另一个孩子一起观察",
+      "usage": "Use only when the paired scene has an explicit shared focus.",
+      "compatible_characters": [
+        "xiaomeng",
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-PO-09",
+      "character_id": "xiaomeng",
+      "asset_type": "pose",
+      "description": "等待变化",
+      "usage": "Use for a visible waiting beat in the experiment or story.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-PO-10",
+      "character_id": "xiaomeng",
+      "asset_type": "pose",
+      "description": "发现变化",
+      "usage": "Use at the visual turning point of an observation.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-PO-11",
+      "character_id": "xiaomeng",
+      "asset_type": "pose",
+      "description": "惊喜反应",
+      "usage": "Use after the result is visible and safe.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-PO-12",
+      "character_id": "xiaomeng",
+      "asset_type": "pose",
+      "description": "思考",
+      "usage": "Use for a quiet reasoning beat.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-PO-01",
+      "character_id": "mother",
+      "asset_type": "pose",
+      "description": "站立",
+      "usage": "Use for a stable adult presence in the scene.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-PO-02",
+      "character_id": "mother",
+      "asset_type": "pose",
+      "description": "坐着",
+      "usage": "Use to place the adult at the children's eye level.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-PO-03",
+      "character_id": "mother",
+      "asset_type": "pose",
+      "description": "伸手操作",
+      "usage": "Use for an observable demonstration.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-PO-04",
+      "character_id": "mother",
+      "asset_type": "pose",
+      "description": "递东西",
+      "usage": "Use when handing a relevant object to a child.",
+      "compatible_characters": [
+        "mother",
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-PO-05",
+      "character_id": "mother",
+      "asset_type": "pose",
+      "description": "指向",
+      "usage": "Use to guide attention without replacing the child's observation.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-PO-06",
+      "character_id": "mother",
+      "asset_type": "pose",
+      "description": "一同观察",
+      "usage": "Use when adult and children share a visible focus.",
+      "compatible_characters": [
+        "mother",
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-PO-07",
+      "character_id": "mother",
+      "asset_type": "pose",
+      "description": "讲解",
+      "usage": "Use for a short, concrete explanation supported by the scene.",
+      "compatible_characters": [
+        "mother",
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-PO-08",
+      "character_id": "mother",
+      "asset_type": "pose",
+      "description": "鼓励陪同",
+      "usage": "Use when the adult supports a child's attempt.",
+      "compatible_characters": [
+        "mother",
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-PO-09",
+      "character_id": "mother",
+      "asset_type": "pose",
+      "description": "安抚支持",
+      "usage": "Use only for mild concern or a safe return to the activity.",
+      "compatible_characters": [
+        "mother",
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-PO-10",
+      "character_id": "mother",
+      "asset_type": "pose",
+      "description": "与孩子互动",
+      "usage": "Use for a clear two-way parent-child exchange.",
+      "compatible_characters": [
+        "mother",
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "ANG-01",
+      "character_id": "shared",
+      "asset_type": "angle",
+      "description": "正面",
+      "usage": "Default identity and dialogue angle.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng",
+        "mother"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "ANG-02",
+      "character_id": "shared",
+      "asset_type": "angle",
+      "description": "左前3/4",
+      "usage": "Use for a natural directional turn while keeping identity visible.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng",
+        "mother"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "ANG-03",
+      "character_id": "shared",
+      "asset_type": "angle",
+      "description": "右前3/4",
+      "usage": "Use for a natural directional turn while keeping identity visible.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng",
+        "mother"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "ANG-04",
+      "character_id": "shared",
+      "asset_type": "angle",
+      "description": "左侧",
+      "usage": "Use for profile-oriented looking or walking.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng",
+        "mother"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "ANG-05",
+      "character_id": "shared",
+      "asset_type": "angle",
+      "description": "右侧",
+      "usage": "Use for profile-oriented looking or walking.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng",
+        "mother"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "ANG-06",
+      "character_id": "shared",
+      "asset_type": "angle",
+      "description": "背面",
+      "usage": "Use for movement away or observing the same scene direction.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng",
+        "mother"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "ANG-07",
+      "character_id": "shared",
+      "asset_type": "angle",
+      "description": "轻微俯视",
+      "usage": "Use sparingly for tabletop or floor-level discovery.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng",
+        "mother"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "ANG-08",
+      "character_id": "shared",
+      "asset_type": "angle",
+      "description": "轻微仰视",
+      "usage": "Use sparingly for a child's sense of scale or adult support.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng",
+        "mother"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-01",
+      "character_id": "xiaoxiong",
+      "asset_type": "outfit",
+      "description": "室内日常：参考图中的女孩默认日常服装。",
+      "usage": "Default outfit for home, indoor observation, and ordinary dialogue scenes.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "is_default": true,
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-02",
+      "character_id": "xiaoxiong",
+      "asset_type": "outfit",
+      "description": "甜美外出：参考图中的女孩轻便外出服装。",
+      "usage": "Use for a short outing or friendly neighborhood scene.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "season": "全年/过渡季",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-03",
+      "character_id": "xiaoxiong",
+      "asset_type": "outfit",
+      "description": "休闲居家：参考图中的女孩舒适居家服装。",
+      "usage": "Use for reading, home experiments, and quiet indoor scenes.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "season": "全年",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-04",
+      "character_id": "xiaoxiong",
+      "asset_type": "outfit",
+      "description": "户外探索：参考图中的女孩户外活动服装。",
+      "usage": "Use for parks, nature walks, and outdoor observation.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "season": "春夏/秋季",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-05",
+      "character_id": "xiaoxiong",
+      "asset_type": "outfit",
+      "description": "雨天：参考图中的女孩雨天防护服装。",
+      "usage": "Use for rain, puddles, and water-related safe observation.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "season": "雨季",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-06",
+      "character_id": "xiaoxiong",
+      "asset_type": "outfit",
+      "description": "春季保暖：参考图中的女孩轻保暖层次。",
+      "usage": "Use for cool spring days and transitional weather.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "season": "春季",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-07",
+      "character_id": "xiaoxiong",
+      "asset_type": "outfit",
+      "description": "远郊活动：参考图中的女孩舒适活动服装。",
+      "usage": "Use for field trips, distant parks, and longer outdoor activities.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "season": "全年/户外",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "G-08",
+      "character_id": "xiaoxiong",
+      "asset_type": "outfit",
+      "description": "节日/特别：参考图中的女孩节日或特别活动服装。",
+      "usage": "Use only when the story event is explicitly special or celebratory.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "season": "按故事",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-01",
+      "character_id": "xiaomeng",
+      "asset_type": "outfit",
+      "description": "室内日常：参考图中的男孩默认日常服装。",
+      "usage": "Default outfit for home, indoor observation, and ordinary dialogue scenes.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "is_default": true,
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-02",
+      "character_id": "xiaomeng",
+      "asset_type": "outfit",
+      "description": "温柔秋冬：参考图中的男孩温暖层次服装。",
+      "usage": "Use for cool-weather indoor or outdoor stories.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "season": "秋冬",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-03",
+      "character_id": "xiaomeng",
+      "asset_type": "outfit",
+      "description": "运动/户外：参考图中的男孩活动服装。",
+      "usage": "Use for running, movement, and outdoor exploration.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "season": "全年/户外",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-04",
+      "character_id": "xiaomeng",
+      "asset_type": "outfit",
+      "description": "户外活动：参考图中的男孩户外探索服装。",
+      "usage": "Use for parks, nature walks, and field observation.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "season": "春夏/秋季",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-05",
+      "character_id": "xiaomeng",
+      "asset_type": "outfit",
+      "description": "雨天：参考图中的男孩雨天防护服装。",
+      "usage": "Use for rain and water-related safe observation.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "season": "雨季",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-06",
+      "character_id": "xiaomeng",
+      "asset_type": "outfit",
+      "description": "春季保暖：参考图中的男孩轻保暖层次。",
+      "usage": "Use for cool spring days and transitional weather.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "season": "春季",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-07",
+      "character_id": "xiaomeng",
+      "asset_type": "outfit",
+      "description": "轻便运动：参考图中的男孩轻便活动服装。",
+      "usage": "Use for simple movement and hands-on learning.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "season": "全年/户外",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "B-08",
+      "character_id": "xiaomeng",
+      "asset_type": "outfit",
+      "description": "节日/特别：参考图中的男孩节日或特别活动服装。",
+      "usage": "Use only when the story event is explicitly special or celebratory.",
+      "compatible_characters": [
+        "xiaomeng"
+      ],
+      "reference_image": "reference/xiaomeng-fullbody-v2.png",
+      "reference_region": "full-body candidate reference",
+      "season": "按故事",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-01",
+      "character_id": "mother",
+      "asset_type": "outfit",
+      "description": "室内日常：参考图中的妈妈默认日常服装。",
+      "usage": "Default outfit for home, explanation, and ordinary family scenes.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "is_default": true,
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-02",
+      "character_id": "mother",
+      "asset_type": "outfit",
+      "description": "居家/陪伴：参考图中的妈妈陪伴孩子服装。",
+      "usage": "Use for reading, demonstration, and family observation at home.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "season": "全年",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-03",
+      "character_id": "mother",
+      "asset_type": "outfit",
+      "description": "轻外出休闲：参考图中的妈妈轻便外出服装。",
+      "usage": "Use for neighborhood and short outing scenes.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "season": "全年/过渡季",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-04",
+      "character_id": "mother",
+      "asset_type": "outfit",
+      "description": "户外活动：参考图中的妈妈户外活动服装。",
+      "usage": "Use for parks, field trips, and outdoor experiments.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "season": "春夏/秋季",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-05",
+      "character_id": "mother",
+      "asset_type": "outfit",
+      "description": "居家/日常：参考图中的妈妈日常陪伴服装。",
+      "usage": "Use for routine family scenes with no special event.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "season": "全年",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "M-06",
+      "character_id": "mother",
+      "asset_type": "outfit",
+      "description": "季节保暖：参考图中的妈妈季节性保暖服装。",
+      "usage": "Use for cool-weather family and outdoor scenes.",
+      "compatible_characters": [
+        "mother"
+      ],
+      "reference_image": "reference/mother-fullbody-v1.png",
+      "reference_region": "full-body candidate reference",
+      "season": "秋冬",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "DUO-01",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "小熊和小猛一起观察",
+      "usage": "Pair asset for a shared focal object and synchronized attention.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "DUO-02",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "小熊和小猛一起讨论",
+      "usage": "Pair asset for a short, visible exchange about the same question.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "DUO-03",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "一个观察、一个提问",
+      "usage": "Pair asset for assigning distinct narrative roles without mixing identities.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "DUO-04",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "一个操作、一个等待",
+      "usage": "Pair asset for showing sequence and anticipation.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "DUO-05",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "小熊和小猛一起发现",
+      "usage": "Pair asset for a shared discovery beat.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "DUO-06",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "小熊和小猛一起开心",
+      "usage": "Pair asset for a warm emotional payoff after the observation.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "DUO-07",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "小熊和小猛一起看向成人",
+      "usage": "Pair asset for transitioning to an adult explanation or next step.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng",
+        "mother"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "DUO-08",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "小熊和小猛一起比较",
+      "usage": "Pair asset for side-by-side comparison with distinct child positions.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "PARENT-01",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "妈妈解释",
+      "usage": "Use for a short, concrete explanation tied to what children can see.",
+      "compatible_characters": [
+        "mother",
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "PARENT-02",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "妈妈示范",
+      "usage": "Use when the adult visibly performs the safe operation.",
+      "compatible_characters": [
+        "mother",
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "PARENT-03",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "妈妈递东西",
+      "usage": "Use when the adult hands a relevant object to a child.",
+      "compatible_characters": [
+        "mother",
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "PARENT-04",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "妈妈观察孩子",
+      "usage": "Use to show patient adult attention while children act.",
+      "compatible_characters": [
+        "mother",
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "PARENT-05",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "孩子提问",
+      "usage": "Use for a child-led question before an explanation.",
+      "compatible_characters": [
+        "mother",
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "PARENT-06",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "孩子观察妈妈操作",
+      "usage": "Use when children learn by watching the adult demonstration.",
+      "compatible_characters": [
+        "mother",
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "PARENT-07",
+      "character_id": "shared",
+      "asset_type": "interaction",
+      "description": "三人共同观察",
+      "usage": "Use for a shared family focal point and a transition to the next page.",
+      "compatible_characters": [
+        "mother",
+        "xiaoxiong",
+        "xiaomeng"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "formal v1.2 overview reused for semantic interaction binding",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2"
+    },
+    {
+      "asset_id": "STYLE-CORE-01",
+      "character_id": "shared",
+      "asset_type": "style",
+      "description": "核心角色资产包 v1.2 的温暖哑光纸感、水粉与蜡笔质感、明亮柔和儿童绘本视觉语言。",
+      "usage": "Apply consistently across a book; do not use it to redesign identity features.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng",
+        "mother"
+      ],
+      "reference_image": "reference/core-character-assets-v1.2.png",
+      "reference_region": "whole supplied overview",
+      "version": "v1.3",
+      "reused_semantics_from": "core-characters-v1.2",
+      "style_master_version": "v1.2"
+    },
+    {
+      "asset_id": "G-ACT-A-01",
+      "character_id": "xiaoxiong",
+      "asset_type": "action-reference",
+      "description": "小熊蹲下观察叶子的辅助视觉参考，不替代 G-ID-01 身份基准。",
+      "usage": "Page-specific auxiliary reference only when the approved storyboard requires crouching observation.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-action-a.png",
+      "reference_region": "whole image",
+      "version": "v1.3",
+      "status": "candidate",
+      "approval_status": "user_approved",
+      "approved_for_production": true
+    },
+    {
+      "asset_id": "G-ACT-B-01",
+      "character_id": "xiaoxiong",
+      "asset_type": "action-reference",
+      "description": "小熊侧身回头的辅助视觉参考，不替代 G-ID-01 身份基准。",
+      "usage": "Page-specific auxiliary reference only when the approved storyboard requires turning back.",
+      "compatible_characters": [
+        "xiaoxiong"
+      ],
+      "reference_image": "reference/xiaoxiong-action-b.png",
+      "reference_region": "whole image",
+      "version": "v1.3",
+      "status": "candidate",
+      "approval_status": "user_approved",
+      "approved_for_production": true
+    },
+    {
+      "asset_id": "GROUP-REF-01",
+      "character_id": null,
+      "asset_type": "group-reference",
+      "description": "小熊、小猛、妈妈三人同框的相对比例与统一画风辅助参考，不替代三张单人身份基准。",
+      "usage": "Optional auxiliary reference for a page that explicitly needs three-character relative scale or interaction guidance.",
+      "compatible_characters": [
+        "xiaoxiong",
+        "xiaomeng",
+        "mother"
+      ],
+      "reference_image": "reference/three-character-group.png",
+      "reference_region": "whole image",
+      "version": "v1.3",
+      "status": "candidate",
+      "approval_status": "user_approved",
+      "approved_for_production": true
+    }
+  ],
+  "usage_contract": {
+    "fixed_asset_ratio": "80% fixed assets",
+    "page_variation_ratio": "20% page variation",
+    "required_page_binding": [
+      "bundle_id",
+      "version",
+      "character_id",
+      "outfit_id",
+      "expression_id",
+      "pose_id",
+      "angle_id"
+    ],
+    "optional_page_binding": [
+      "interaction_id",
+      "style_asset_id"
+    ],
+    "page_delta": "Only describe scene, prop, knowledge evidence, composition, and continuity changes for this page.",
+    "prompt_rule": "Use the selected identity and clean single-role or interaction reference; do not submit the full overview sheet as the default page prompt.",
+    "consistency_rule": "Do not change age feeling, face shape, facial proportions, hair, hair color, skin tone, body proportions, temperament, or gender distinction because of scene, outfit, action, or angle.",
+    "version_rule": "Keep v1.2 immutable. A visual change requires a new version and an explicit migration decision.",
+    "privacy_rule": "This bundle contains stylized visual reference art only. Do not add raw child photos or personally identifying information."
+  },
+  "release_status": "released",
+  "production_enabled": true,
+  "base_bundle_id": "core-characters-v1.2",
+  "base_version": "v1.2",
+  "approval_registry": "approval.json"
+}

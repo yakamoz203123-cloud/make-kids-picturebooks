@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "default_style_id": "STYLE-CORE-01",
+  "styles": [
+    {
+      "style_id": "STYLE-CORE-01",
+      "canonical_id": "STYLE-CORE-01",
+      "version": "v1.2",
+      "display_name": "温暖叙事绘本风",
+      "status": "approved",
+      "aliases": ["STYLE-01"],
+      "reference_assets": [
+        {
+          "reference_id": "REF-STYLE-CORE-01-OVERVIEW",
+          "reference_file": "characters/core-v1.2/reference/core-character-assets-v1.2.png",
+          "reference_hash": "fb16e77d104bc8fb328dab096c4bd83c04245c5310a18a4b6efee404e438af07",
+          "reference_purpose": "approved style and character overview",
+          "reference_region": "whole supplied overview",
+          "style_binding": "STYLE-CORE-01:v1.2",
+          "validation_status": "approved-reference"
+        }
+      ],
+      "content_hash": "a7acceeacd62b53de21c0fce89603383a5863ec243b26c79d612f62d8ca9bbf9",
+      "compatibility": {
+        "style_master_id": "STYLE-CORE-01",
+        "style_master_version": "v1.2",
+        "character_asset_bundle": "core-characters-v1.2",
+        "profile": "xiaohongshu-feed-3x4"
+      },
+      "description": "style_master.json v1.2 的用户友好别名，不创建第二套视觉事实。"
+    },
+    {
+      "style_id": "STYLE-05",
+      "canonical_id": "STYLE-05",
+      "version": "v0.1",
+      "display_name": "柔和蜡笔粉彩风",
+      "status": "candidate",
+      "aliases": [],
+      "reference_assets": [],
+      "content_hash": null,
+      "compatibility": {
+        "requires_visual_probe": true,
+        "requires_user_approval": true
+      },
+      "description": "蜡笔与粉彩质感、圆润造型、柔和明快颜色；当前没有正式视觉参考资产。"
+    },
+    {
+      "style_id": "STYLE-06",
+      "canonical_id": "STYLE-06",
+      "version": "v0.1",
+      "display_name": "简约现代水彩风",
+      "status": "approved",
+      "aliases": [],
+      "reference_assets": [
+        {
+          "reference_id": "REF-STYLE-06-TRIO-01",
+          "reference_file": "style-06-v0.1/reference/STYLE06-TRIO-01.png",
+          "reference_hash": "b39a1ce01de25d7532e2cc1d8e44ae67926f61f6db36ff34d670022cb15b77ac",
+          "reference_purpose": "formally approved STYLE-06 production visual reference",
+          "reference_region": "whole image",
+          "style_binding": "STYLE-06:v0.1",
+          "validation_status": "approved-reference"
+        }
+      ],
+      "content_hash": "45cb24e2ecfec2f00567528eb6dc0c894edeafaa08582a1e9f250e265bf82c8e",
+      "compatibility": {
+        "character_asset_bundle": "core-characters-v1.3",
+        "profile": "xiaohongshu-feed-3x4",
+        "aspect_ratio": "3:4",
+        "native_width_px": 1080,
+        "native_height_px": 1440,
+        "requires_visual_probe": true,
+        "requires_user_approval": true
+      },
+      "description": "简约现代水彩风；STYLE-06 v0.1，正式视觉参考为已批准的三人同框样图；不改变 STYLE-CORE-01 v1.2 默认画风。"
+    }
+  ]
+}

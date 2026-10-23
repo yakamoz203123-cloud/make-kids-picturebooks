@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "bundle_id": "core-characters-v1.3",
+  "version": "v1.3",
+  "source_policy": "copied into this staged bundle; source projects remain unchanged",
+  "assets": [
+    {
+      "asset_id": "G-ID-01",
+      "character_id": "xiaoxiong",
+      "outfit_id": "G-01",
+      "path": "reference/xiaoxiong-fullbody-v2.png",
+      "source_path": "D:/宝宝绘本制作/projects/character-reference-phase2b-2026-10-19/candidates/xiaoxiong/CAND-XIAOXIONG-FULLBODY-ID-02.png",
+      "sha256": "1437a1cab704893850a6d3575df283d02fa5abd58ef38181a162f38fa7f5c535",
+      "dimensions": [1086, 1448],
+      "role": "identity-reference",
+      "visual_review_status": "user_approved",
+      "approved_for_production": false
+    },
+    {
+      "asset_id": "B-ID-01",
+      "character_id": "xiaomeng",
+      "outfit_id": "B-01",
+      "path": "reference/xiaomeng-fullbody-v2.png",
+      "source_path": "D:/宝宝绘本制作/projects/character-reference-phase2c-2026-10-19/candidates/xiaomeng/XIAOMENG-FULLBODY-BASE-V2.png",
+      "sha256": "d022cbb87c6d24e0adb9c1e22d3830854fb7e322cdfe59512e850d16184550cc",
+      "dimensions": [1086, 1448],
+      "role": "identity-reference",
+      "visual_review_status": "awaiting_user_visual_signoff",
+      "approved_for_production": false
+    },
+    {
+      "asset_id": "M-ID-01",
+      "character_id": "mother",
+      "outfit_id": "M-01",
+      "path": "reference/mother-fullbody-v1.png",
+      "source_path": "D:/宝宝绘本制作/projects/character-reference-phase2c-2026-10-19/candidates/mother/MOTHER-FULLBODY-BASE-V1.png",
+      "sha256": "34368c46e6db6d5893161fdcba30b6ce2f769d1aba79f0ee610b981bbd5e5e8c",
+      "dimensions": [1086, 1448],
+      "role": "identity-reference",
+      "visual_review_status": "awaiting_user_visual_signoff",
+      "approved_for_production": false
+    },
+    {
+      "asset_id": "G-ACT-A-01",
+      "character_id": "xiaoxiong",
+      "path": "reference/xiaoxiong-action-a.png",
+      "source_path": "D:/宝宝绘本制作/projects/xiaoxiong-action-consistency-2026-10-19/candidates/XIAOXIONG-ACTION-A.png",
+      "sha256": "558ee651725ba5d230305b889be4110127e7b8ebc17d904fb94285a163ade7f6",
+      "dimensions": [1086, 1448],
+      "role": "action-auxiliary",
+      "visual_review_status": "awaiting_user_visual_signoff",
+      "approved_for_production": false
+    },
+    {
+      "asset_id": "G-ACT-B-01",
+      "character_id": "xiaoxiong",
+      "path": "reference/xiaoxiong-action-b.png",
+      "source_path": "D:/宝宝绘本制作/projects/xiaoxiong-action-consistency-2026-10-19/candidates/XIAOXIONG-ACTION-B.png",
+      "sha256": "64c60494bd494754827864fe80aa491cb1ad783a8637cfc579eed57732b06b3f",
+      "dimensions": [1086, 1448],
+      "role": "action-auxiliary",
+      "visual_review_status": "awaiting_user_visual_signoff",
+      "approved_for_production": false
+    },
+    {
+      "asset_id": "GROUP-REF-01",
+      "character_id": null,
+      "path": "reference/three-character-group.png",
+      "source_path": "D:/宝宝绘本制作/projects/character-group-phase2d-2026-10-19/candidates/GROUP-CONSISTENCY-01.png",
+      "sha256": "c4c84c685e998296f8b96b97814d91449d9ca709a2e9ad4b25da784d6f4be044",
+      "dimensions": [1086, 1448],
+      "role": "group-auxiliary",
+      "visual_review_status": "awaiting_user_visual_signoff",
+      "approved_for_production": false
+    }
+  ]
+}

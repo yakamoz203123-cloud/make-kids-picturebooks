@@ -1,0 +1,41 @@
+{
+  "minimum_text_size_pt": {
+    "reading": 22.0,
+    "print": 20.59
+  },
+  "minimum_print_text_size_pt": 18.0,
+  "reading_pages": 4,
+  "print_sides": 2,
+  "sheets": 1,
+  "pairs": [
+    [
+      4,
+      1
+    ],
+    [
+      2,
+      3
+    ]
+  ],
+  "image_checks": [
+    {
+      "page": 1,
+      "effective_dpi": 677.3
+    },
+    {
+      "page": 2,
+      "effective_dpi": 677.3
+    },
+    {
+      "page": 3,
+      "effective_dpi": 677.3
+    },
+    {
+      "page": 4,
+      "effective_dpi": 677.3
+    }
+  ],
+  "compressed_images": 0,
+  "review_status": "pending",
+  "note": "已导出逐页渲染图；仍须实际查看并保存知识与视觉审核记录。"
+}

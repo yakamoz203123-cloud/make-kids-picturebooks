@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -10,6 +11,19 @@ from project_paths import normalize_relative_path
 STATES = ('assessed','planned','text','illustrated','laid_out','digital_checked','print_checked')
 AGES = ('3-4','5-7','8-10','5-6')
 REQUIRED_ARTIFACTS = ('concept','story','storyboard','layout','page_manifest','reading_pdf','print_pdf','review','acceptance')
+ADAPTATION_MODES = ('selected_topics','chapter_order','single_book')
+LEGACY_PAGE_STATUS = re.compile(r'^page\d+_[A-Za-z0-9_]+$')
+
+def _is_legacy_page_status(status: object) -> bool:
+    """Recognize historical page-production states without treating them as release states."""
+    return isinstance(status, str) and LEGACY_PAGE_STATUS.fullmatch(status) is not None
+
+def _book_source_version(data: dict, book: dict) -> object:
+    source = data.get('source')
+    return book.get('source_version') or (source.get('version') if isinstance(source, dict) else None)
+
+def _book_characters_version(data: dict, book: dict) -> object:
+    return book.get('characters_version') or data.get('characters_version')
 
 def validate_selection(data: dict) -> list[str]:
     errors=[]
@@ -43,7 +57,7 @@ def validate_project(data: dict) -> list[str]:
     if not isinstance(data, dict): return ['项目必须是对象']
     errors=[]
     mode=data.get('adaptation_mode')
-    if mode is not None and mode not in ('selected_topics','chapter_order'):errors.append('非法改编模式')
+    if mode is not None and mode not in ADAPTATION_MODES:errors.append('非法改编模式')
     if mode=='selected_topics':errors.extend(validate_selection(data))
     targets=data.get('target_age_bands',[])
     if not isinstance(targets,list) or any(age not in AGES for age in targets):errors.append('非法目标年龄段')
@@ -61,19 +75,21 @@ def validate_project(data: dict) -> list[str]:
         if not isinstance(bid,str) or not bid.strip(): errors.append(f'册{i}: 缺少编号')
         elif bid in seen: errors.append(f'册{i}: 编号重复 {bid}')
         else: seen.add(bid)
-        if book.get('status') not in STATES: errors.append(f'册{i}: 非法状态')
-        if not book.get('source_version') or not book.get('characters_version'): errors.append(f'册{i}: 缺少来源或角色版本')
-        if not isinstance(book.get('artifacts'),dict): errors.append(f'册{i}: artifacts 必须是对象')
+        status = book.get('status')
+        if status not in STATES and not _is_legacy_page_status(status): errors.append(f'册{i}: 非法状态')
+        if not _book_source_version(data, book) or not _book_characters_version(data, book): errors.append(f'册{i}: 缺少来源或角色版本')
+        artifacts = book.get('artifacts')
+        if artifacts is not None and not isinstance(artifacts, dict): errors.append(f'册{i}: artifacts 必须是对象')
         if 'age_band' in book and book['age_band'] not in AGES: errors.append(f'册{i}: 非法年龄段')
         if mode=='selected_topics' and isinstance(data.get('topic_selection'),dict):
             selection=data['topic_selection'];queue=selection.get('queue',[])
             if isinstance(queue,list) and bid in queue and book.get('age_band')!=selection.get('age_band'):errors.append(f'册{i}: 本次队列册的年龄不一致')
-        if book.get('status') in ('digital_checked','print_checked'):
+        if status in ('digital_checked','print_checked'):
             if book.get('age_band') not in AGES:errors.append(f'册{i}: 完成册需要年龄段')
-            artifacts=book.get('artifacts',{})
+            artifacts=book.get('artifacts')
             if not isinstance(artifacts,dict) or any(not isinstance(artifacts.get(k),str) or not artifacts[k].strip() for k in REQUIRED_ARTIFACTS):
                 errors.append(f'册{i}: 完成册缺少验收成果路径')
-        if book.get('status')=='print_checked':
+        if status=='print_checked':
             feedback=book.get('print_feedback')
             if not isinstance(feedback,dict) or feedback.get('passed') is not True or not feedback.get('note'):
                 errors.append(f'册{i}: 试打通过需要用户实际反馈')
@@ -127,8 +143,10 @@ def next_action(data: dict, base_dir: Path | None = None) -> dict | None:
             from accept_book import verify_receipt
             if verify_receipt(data,book,Path(base_dir)):
                 return {'book_id':book['id'],'stage':'revalidate'}
-        if book['source_version']!=data['source']['version'] or book['characters_version']!=data['characters_version'] or book.get('stale'):
+        if _book_source_version(data, book)!=data['source']['version'] or _book_characters_version(data, book)!=data['characters_version'] or book.get('stale'):
             return {'book_id':book['id'],'stage':'revalidate'}
+        if _is_legacy_page_status(book['status']):
+            return {'book_id':book['id'],'stage':'resume_page_production','status':book['status']}
         idx=STATES.index(book['status'])
         if idx<STATES.index('digital_checked'):
             return {'book_id':book['id'],'stage':STATES[idx+1]}

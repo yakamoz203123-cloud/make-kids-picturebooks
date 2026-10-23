@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "receipt_type": "formal-character-bundle-release",
+  "bundle_id": "core-characters-v1.3",
+  "version": "v1.3",
+  "status": "released",
+  "release_status": "released",
+  "immutable": true,
+  "simulation": false,
+  "manifest_sha256": "811571b7e509c694be1872c90406161866592198648d9ccf52c656d031abd249",
+  "manifest_bytes_sha256": "5338d4ed74b9cd66e672072a270f88418fc264943e58321a505d90ee4df56599",
+  "approval_sha256": "1aad90594b55542b574c45f08d81af07c7e912d997c63225a6734e7aefbe8198",
+  "approval_bytes_sha256": "c7a6bd0f7ebbf33ed75cba4f16a65f356e7727e0cfe545c50c8253c39ff56354",
+  "reference_image": "reference/core-character-assets-v1.2.png",
+  "reference_sha256": "fb16e77d104bc8fb328dab096c4bd83c04245c5310a18a4b6efee404e438af07",
+  "files": {
+    "aliases.json": "8a76a90e5a321289b0d31323b3726b6c1caef4a78cbd2db2829122d04c56e6ff",
+    "approval.json": "c7a6bd0f7ebbf33ed75cba4f16a65f356e7727e0cfe545c50c8253c39ff56354",
+    "asset-sources.json": "cca65e3f7d5427f343ae605c46c5cb2b7608f01e0bef3adf3241a9f4058c55b6",
+    "manifest.json": "5338d4ed74b9cd66e672072a270f88418fc264943e58321a505d90ee4df56599",
+    "reference/core-character-assets-v1.2.png": "fb16e77d104bc8fb328dab096c4bd83c04245c5310a18a4b6efee404e438af07",
+    "reference/mother-fullbody-v1.png": "34368c46e6db6d5893161fdcba30b6ce2f769d1aba79f0ee610b981bbd5e5e8c",
+    "reference/three-character-group.png": "c4c84c685e998296f8b96b97814d91449d9ca709a2e9ad4b25da784d6f4be044",
+    "reference/xiaomeng-fullbody-v2.png": "d022cbb87c6d24e0adb9c1e22d3830854fb7e322cdfe59512e850d16184550cc",
+    "reference/xiaoxiong-action-a.png": "558ee651725ba5d230305b889be4110127e7b8ebc17d904fb94285a163ade7f6",
+    "reference/xiaoxiong-action-b.png": "64c60494bd494754827864fe80aa491cb1ad783a8637cfc579eed57732b06b3f",
+    "reference/xiaoxiong-fullbody-v2.png": "1437a1cab704893850a6d3575df283d02fa5abd58ef38181a162f38fa7f5c535"
+  },
+  "content_sha256": "7a4e2bf9bbece841dc9c435160da02eb4364345b9fa5cb697fea497110c26329",
+  "receipt_sha256": "60fb94eebcf843a0701bf4124ddc8a4a5cda599fb7e25f03771ba8c6729fdfbc"
+}

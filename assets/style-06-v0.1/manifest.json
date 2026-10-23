@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "bundle_id": "style-06-v0.1",
+  "style_id": "STYLE-06",
+  "version": "v0.1",
+  "status": "approved",
+  "default_style": false,
+  "visual_reference": {
+    "path": "reference/STYLE06-TRIO-01.png",
+    "reference_image": "reference/STYLE06-TRIO-01.png",
+    "reference_sha256": "b39a1ce01de25d7532e2cc1d8e44ae67926f61f6db36ff34d670022cb15b77ac",
+    "reference_purpose": "formally approved STYLE-06 production visual reference",
+    "reference_region": "whole image",
+    "validation_status": "approved-reference"
+  },
+  "style_spec": {
+    "display_name": "简约现代水彩风",
+    "material": [
+      "transparent watercolor wash",
+      "soft pigment blooms",
+      "light natural paper"
+    ],
+    "palette": [
+      "muted coral",
+      "pale peach",
+      "soft sage",
+      "warm white",
+      "quiet ochre"
+    ],
+    "line": "minimal delicate watercolor contour with selective soft pencil accents",
+    "lighting": "diffuse natural daylight with transparent layered shadows",
+    "composition": "child-eye-level full-body focal action, generous clean negative space, leaf observation remains unmistakable",
+    "prohibitions": [
+      "no photorealism",
+      "no plastic 3D rendering",
+      "no redesigned facial features",
+      "no text, watermark, subtitle, QR code, or extra person",
+      "do not make the image so pale that ordinary printing loses the focal action"
+    ]
+  },
+  "compatibility": {
+    "character_asset_bundle": "core-characters-v1.3",
+    "profile": "xiaohongshu-feed-3x4",
+    "aspect_ratio": "3:4",
+    "native_width_px": 1080,
+    "native_height_px": 1440
+  },
+  "production_approval": {
+    "status": "approved",
+    "evidence": "D:/宝宝绘本制作/projects/style-adaptation-phase3-2026-10-19/validation/user-formal-style06-release-authorization-2026-10-20.md",
+    "evidence_sha256": "6887723a648d3c281055d0e4a4181b9c1d09d843ea01cc370e9b5529850e196a",
+    "scope": "STYLE-06 only; STYLE-05 remains incomplete; STYLE-CORE-01 v1.2 remains default"
+  },
+  "integrity_notice": "SHA-256 receipt verifies file contents; it is not a digital signature."
+}

@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "props": [
+    {
+      "prop_id": "PROP-FLASHLIGHT",
+      "version": "v0.1",
+      "name": "手电筒",
+      "aliases": ["手电", "小手电"],
+      "stable_features": ["儿童可识别的手持光源外形"],
+      "allowed_states": ["held-by-mother", "placed-on-table", "pointing-at-wall"],
+      "reference_assets": [],
+      "scientific_constraints": ["光线不直接照向孩子眼睛"],
+      "status": "registered-unverified",
+      "source_projects": ["shadow-3-4-v1"]
+    },
+    {
+      "prop_id": "PROP-BLOCK",
+      "version": "v0.1",
+      "name": "红色积木",
+      "aliases": ["积木", "红积木"],
+      "stable_features": ["红色、规则块状、儿童可握持"],
+      "allowed_states": ["placed-on-floor", "held-by-child", "between-light-and-wall", "moved-toward-wall"],
+      "reference_assets": [],
+      "scientific_constraints": [],
+      "status": "registered-unverified",
+      "source_projects": ["shadow-3-4-v1"]
+    },
+    {
+      "prop_id": "PROP-LEAF",
+      "version": "v0.1",
+      "name": "自然掉落的叶子",
+      "aliases": ["叶子", "落叶"],
+      "stable_features": ["自然掉落、颜色和轮廓可比较"],
+      "allowed_states": ["on-ground", "in-basket", "on-cloth", "grouped-by-shape", "grouped-by-color", "grouped-by-size"],
+      "reference_assets": [],
+      "scientific_constraints": ["不把单一叶形泛化为所有叶子", "不出现孩子拔活叶"],
+      "status": "registered-unverified",
+      "source_projects": ["shadow-3-4-v1", "nature-collector-3-4-v0.1"]
+    },
+    {
+      "prop_id": "PROP-BASKET",
+      "version": "v0.1",
+      "name": "小篮子",
+      "aliases": ["篮子"],
+      "stable_features": ["儿童观察活动中用于暂放自然物的小篮子"],
+      "allowed_states": ["empty", "holding-natural-objects", "carried-by-mother", "placed-near-cloth"],
+      "reference_assets": [],
+      "scientific_constraints": ["用于观察而非品尝自然物"],
+      "status": "registered-unverified",
+      "source_projects": ["nature-collector-3-4-v0.1"]
+    },
+    {
+      "prop_id": "PROP-OBSERVATION-CLOTH",
+      "version": "v0.1",
+      "name": "观察小布",
+      "aliases": ["小布", "浅色小布"],
+      "stable_features": ["平整、浅色、用于摆放观察材料"],
+      "allowed_states": ["folded", "spread-on-ground", "holding-natural-objects"],
+      "reference_assets": [],
+      "scientific_constraints": ["作为安全观察范围的视觉边界，不替代成人陪同"],
+      "status": "registered-unverified",
+      "source_projects": ["nature-collector-3-4-v0.1"]
+    },
+    {
+      "prop_id": "PROP-STONE",
+      "version": "v0.1",
+      "name": "经成人确认的石头",
+      "aliases": ["石头"],
+      "stable_features": ["自然物、颜色和大小可比较、没有尖锐危险外形"],
+      "allowed_states": ["on-ground", "in-basket", "on-cloth", "grouped-by-shape", "grouped-by-color", "grouped-by-size"],
+      "reference_assets": [],
+      "scientific_constraints": ["儿童先询问成人再接触，不暗示矿物鉴定"],
+      "status": "registered-unverified",
+      "source_projects": ["nature-collector-3-4-v0.1"]
+    },
+    {
+      "prop_id": "PROP-SEED",
+      "version": "v0.1",
+      "name": "经成人确认的种子",
+      "aliases": ["种子"],
+      "stable_features": ["自然物、形状可比较、不画成零食"],
+      "allowed_states": ["on-ground", "in-basket", "on-cloth", "grouped-by-shape", "grouped-by-color", "grouped-by-size"],
+      "reference_assets": [],
+      "scientific_constraints": ["只观察不品尝", "儿童先询问成人再接触"],
+      "status": "registered-unverified",
+      "source_projects": ["nature-collector-3-4-v0.1"]
+    }
+  ]
+}

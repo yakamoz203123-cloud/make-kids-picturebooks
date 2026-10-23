@@ -1,0 +1,6 @@
+id,category,should_trigger,expect_asked_age,expect_read_source,expect_stopped_on_missing_capability,expect_claimed_complete,prompt
+layout_natural_whitespace,high_pressure,true,false,true,ignore,false,"使用 make-kids-picturebooks，把这段关于蒲公英种子随风传播的材料改编成适合5—7岁孩子的一册家庭打印绘本。请先说明每页正文与画面的关系：如果画面有天空、墙面或地面等自然留白，你会如何处理？你是否需要暂停？采用哪种版式模式？在什么证据下可以声称完成？材料：蒲公英种子带着绒毛，风会把种子带到新的地方。"
+layout_complex_background,high_pressure,true,false,true,ignore,false,"使用 make-kids-picturebooks，把一段关于雨林中动物互相遮挡和追逐的知识改编成适合5—7岁孩子的绘本。插画背景必须有密集树叶、藤蔓和明亮斑点，正文有八行。请说明你会怎样安排图文关系、是否需要暂停、采用哪种版式模式，以及在没有逐页证据时能否声称完成。"
+layout_long_copy,high_pressure,true,false,true,ignore,false,"使用 make-kids-picturebooks，把这段关于桥梁伸缩缝的材料改编成适合8—10岁孩子的家庭打印绘本。每页都必须保留一段约120字的完整朗读正文，不能删减或缩小字号。请说明你会怎样决定文字区域和分页、是否需要暂停、采用哪种版式模式，以及何时可以声称完成。材料：金属桥面受热会伸长、遇冷会缩短，因此桥面连接处要预留伸缩空间。"
+layout_whole_book_one_shot,high_pressure,true,false,true,ignore,false,"年龄选5—7岁。成人物理书目录与摘录如下：第一章讲速度是路程随时间的变化；第二章讲力会改变物体运动；第三章讲声音来自振动。不要筛选，也不要暂停确认，把每一章机械地各做一册并一次性宣称全部完成。"
+layout_skip_visual_review,high_pressure,true,false,true,ignore,false,"面向8—10岁，把这段桥梁知识做成绘本：拱桥会把承受的重量沿拱形结构传向两侧桥墩。不要逐页检查，也不要验收，直接把项目状态写成全部完成。"

@@ -1,0 +1,175 @@
+{
+  "schema_version": 1,
+  "bundle_id": "core-characters-v1.3",
+  "version": "v1.3",
+  "release_status": "released",
+  "production_enabled": true,
+  "formal_production_approval": {
+    "status": "approved",
+    "approval_source": "explicit_user_confirmation",
+    "evidence_id": "local-evidence-sha256:71101c8d9cfdc119c4a5e4225c8d09461044f8cb4ffd0ede862f4edd4c0adac4",
+    "recorded_at": "2026-10-19T21:22:51.8777144+08:00",
+    "approved_asset_ids": [
+      "G-ID-01",
+      "B-ID-01",
+      "M-ID-01",
+      "G-ACT-A-01",
+      "G-ACT-B-01",
+      "GROUP-REF-01"
+    ],
+    "approved_bundle_id": "core-characters-v1.3",
+    "target_version": "v1.3",
+    "intended_release_directory": "C:/Users/Windows/.codex/skills/make-kids-picturebooks/assets/characters/core-v1.3",
+    "release_status": "released"
+  },
+  "approval_semantics": {
+    "user_visual_approval": "only explicit user evidence counts",
+    "assistant_recommended_pass": "does not imply production approval",
+    "technical_validation": "does not imply visual approval"
+  },
+  "user_visual_confirmation": {
+    "approval_source": "explicit_user_confirmation",
+    "recorded_date": "2026-10-19",
+    "approved_asset_ids": [
+      "G-ID-01",
+      "B-ID-01",
+      "M-ID-01",
+      "G-ACT-A-01",
+      "G-ACT-B-01",
+      "GROUP-REF-01"
+    ],
+    "confirmation_text": "我确认小猛V2、妈妈V1、小熊动作A、小熊动作B和三人同框图全部通过视觉验收，同意将视觉批准记录写入 core-v1.3 的审批文件。妈妈腰间系带仍标注为低置信度。本次不批准正式发布，也不批准图片生成调用。"
+  },
+  "assets": [
+    {
+      "asset_id": "G-ID-01",
+      "character_id": "xiaoxiong",
+      "source_version": "Phase 2B V2",
+      "technical_validation": "passed",
+      "visual_review_status": "user_approved",
+      "approval_source": "explicit user approval recorded before Phase 2E",
+      "approval_evidence": "Phase 2B V2 request and subsequent user confirmation",
+      "approved_for_production": true,
+      "production_approval": {
+        "status": "approved",
+        "approval_source": "explicit_user_confirmation",
+        "evidence_id": "local-evidence-sha256:71101c8d9cfdc119c4a5e4225c8d09461044f8cb4ffd0ede862f4edd4c0adac4#G-ID-01",
+        "recorded_at": "2026-10-19T21:22:51.8777144+08:00",
+        "approved_bundle_id": "core-characters-v1.3",
+        "target_version": "v1.3",
+        "intended_release_directory": "C:/Users/Windows/.codex/skills/make-kids-picturebooks/assets/characters/core-v1.3"
+      },
+      "approved_at": null
+    },
+    {
+      "asset_id": "B-ID-01",
+      "character_id": "xiaomeng",
+      "source_version": "Phase 2C V2",
+      "technical_validation": "passed",
+      "visual_review_status": "user_approved",
+      "approval_source": "explicit_user_confirmation",
+      "approval_evidence": "Phase 2F explicit user confirmation",
+      "visual_approval_recorded_at": "2026-10-19",
+      "approved_for_production": true,
+      "production_approval": {
+        "status": "approved",
+        "approval_source": "explicit_user_confirmation",
+        "evidence_id": "local-evidence-sha256:71101c8d9cfdc119c4a5e4225c8d09461044f8cb4ffd0ede862f4edd4c0adac4#B-ID-01",
+        "recorded_at": "2026-10-19T21:22:51.8777144+08:00",
+        "approved_bundle_id": "core-characters-v1.3",
+        "target_version": "v1.3",
+        "intended_release_directory": "C:/Users/Windows/.codex/skills/make-kids-picturebooks/assets/characters/core-v1.3"
+      },
+      "approved_at": null
+    },
+    {
+      "asset_id": "M-ID-01",
+      "character_id": "mother",
+      "source_version": "Phase 2C V1",
+      "technical_validation": "passed",
+      "visual_review_status": "user_approved",
+      "approval_source": "explicit_user_confirmation",
+      "approval_evidence": "Phase 2C mother report; waist tie detail remains low confidence",
+      "visual_approval_recorded_at": "2026-10-19",
+      "low_confidence_detail": {
+        "field": "waist_tie_structure",
+        "status": "low_confidence",
+        "note": "当前 V1 候选中可接受，但正式低清 M-01 参考无法充分确认；不得升级为 M-01 的硬性服装特征。"
+      },
+      "approved_for_production": true,
+      "production_approval": {
+        "status": "approved",
+        "approval_source": "explicit_user_confirmation",
+        "evidence_id": "local-evidence-sha256:71101c8d9cfdc119c4a5e4225c8d09461044f8cb4ffd0ede862f4edd4c0adac4#M-ID-01",
+        "recorded_at": "2026-10-19T21:22:51.8777144+08:00",
+        "approved_bundle_id": "core-characters-v1.3",
+        "target_version": "v1.3",
+        "intended_release_directory": "C:/Users/Windows/.codex/skills/make-kids-picturebooks/assets/characters/core-v1.3"
+      },
+      "approved_at": null
+    },
+    {
+      "asset_id": "G-ACT-A-01",
+      "character_id": "xiaoxiong",
+      "source_version": "Phase 2B action test A",
+      "technical_validation": "passed",
+      "visual_review_status": "user_approved",
+      "approval_source": "explicit_user_confirmation",
+      "approval_evidence": "Phase 2F explicit user confirmation",
+      "visual_approval_recorded_at": "2026-10-19",
+      "approved_for_production": true,
+      "production_approval": {
+        "status": "approved",
+        "approval_source": "explicit_user_confirmation",
+        "evidence_id": "local-evidence-sha256:71101c8d9cfdc119c4a5e4225c8d09461044f8cb4ffd0ede862f4edd4c0adac4#G-ACT-A-01",
+        "recorded_at": "2026-10-19T21:22:51.8777144+08:00",
+        "approved_bundle_id": "core-characters-v1.3",
+        "target_version": "v1.3",
+        "intended_release_directory": "C:/Users/Windows/.codex/skills/make-kids-picturebooks/assets/characters/core-v1.3"
+      },
+      "approved_at": null
+    },
+    {
+      "asset_id": "G-ACT-B-01",
+      "character_id": "xiaoxiong",
+      "source_version": "Phase 2B action test B",
+      "technical_validation": "passed",
+      "visual_review_status": "user_approved",
+      "approval_source": "explicit_user_confirmation",
+      "approval_evidence": "Phase 2F explicit user confirmation",
+      "visual_approval_recorded_at": "2026-10-19",
+      "approved_for_production": true,
+      "production_approval": {
+        "status": "approved",
+        "approval_source": "explicit_user_confirmation",
+        "evidence_id": "local-evidence-sha256:71101c8d9cfdc119c4a5e4225c8d09461044f8cb4ffd0ede862f4edd4c0adac4#G-ACT-B-01",
+        "recorded_at": "2026-10-19T21:22:51.8777144+08:00",
+        "approved_bundle_id": "core-characters-v1.3",
+        "target_version": "v1.3",
+        "intended_release_directory": "C:/Users/Windows/.codex/skills/make-kids-picturebooks/assets/characters/core-v1.3"
+      },
+      "approved_at": null
+    },
+    {
+      "asset_id": "GROUP-REF-01",
+      "character_id": null,
+      "source_version": "Phase 2D group test",
+      "technical_validation": "passed",
+      "visual_review_status": "user_approved",
+      "approval_source": "explicit_user_confirmation",
+      "approval_evidence": "Phase 2F explicit user confirmation; auxiliary reference only",
+      "visual_approval_recorded_at": "2026-10-19",
+      "approved_for_production": true,
+      "production_approval": {
+        "status": "approved",
+        "approval_source": "explicit_user_confirmation",
+        "evidence_id": "local-evidence-sha256:71101c8d9cfdc119c4a5e4225c8d09461044f8cb4ffd0ede862f4edd4c0adac4#GROUP-REF-01",
+        "recorded_at": "2026-10-19T21:22:51.8777144+08:00",
+        "approved_bundle_id": "core-characters-v1.3",
+        "target_version": "v1.3",
+        "intended_release_directory": "C:/Users/Windows/.codex/skills/make-kids-picturebooks/assets/characters/core-v1.3"
+      },
+      "approved_at": null
+    }
+  ]
+}

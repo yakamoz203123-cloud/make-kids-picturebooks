@@ -1,0 +1,531 @@
+{
+  "schema_version": 1,
+  "package_type": "skill",
+  "version": "0.11.0-preview",
+  "files": [
+    {
+      "path": "make-kids-picturebooks/.gitignore",
+      "sha256": "862263fa1f46c20f0d1e4dac5ffcc75abd55c08211b2c3864c5f8764b9d87793"
+    },
+    {
+      "path": "make-kids-picturebooks/agents/openai.yaml",
+      "sha256": "b8782e9b80fc25268dc7140af332d47a61e1059a6343239117ebaf38a4472faa"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/book-template.json",
+      "sha256": "b1c613c35d4dadc92d41ce1b4f328b374464f30635666df98afc6db2f0050559"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/mother/angles/README.md",
+      "sha256": "c9315510bf64f58cc5e94d528ce62fc02b5001da4e5f1620b725d6fa0f3b3e5f"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/mother/expressions/README.md",
+      "sha256": "813f51322ccaa2d701ca7152be5be258b2bd8db14039afc2bfdc451795edf878"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/mother/identity/README.md",
+      "sha256": "a7a4299c29c1d0b3874013dbbf68626b6aa163ae69012debe5142b209b01624f"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/mother/outfits/README.md",
+      "sha256": "99a0a55d1d03d65d4984b14f1d609509df63575f66a0d76b24abded21907d17a"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/mother/poses/README.md",
+      "sha256": "012582d9ab9447d03f15fca23e1661bced1493e5eb004c0b38802cdcb4bfabca"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/xiaomeng/angles/README.md",
+      "sha256": "1cb871d2ed34745849cc5af44086ed4418f7c0ef7fbd82ce0422e2375485bc95"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/xiaomeng/expressions/README.md",
+      "sha256": "aed50806d6c876cb0820c181a277d7490d82670099bde86b33d3eb623360e3b5"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/xiaomeng/identity/README.md",
+      "sha256": "f80c1aaad927e6dc53750e46354f55fa8edfc34564bad972d0636027721c2bc9"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/xiaomeng/outfits/README.md",
+      "sha256": "ea2e1fab055053893105cea76e8c910d1d5a174d0f18572dfe96b66178a0f384"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/xiaomeng/poses/README.md",
+      "sha256": "0749ea83f6ee2dd4014eb3d7ade6aa8f2d38e1ff845e2206384009b7cf452b9a"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/xiaoxiong/angles/README.md",
+      "sha256": "f60b13f60607a4bc7742c9a34e22cf2cb54470526f0399cf6e0d5ca7488e6c0e"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/xiaoxiong/expressions/README.md",
+      "sha256": "479432a5c1615c8673cbb1391874156b43a2e5959006256bfde012ba13b06d58"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/xiaoxiong/identity/README.md",
+      "sha256": "c3220abe4bc44576be402ca34129e0792bb977e0085ec89d5149962692c34a65"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/xiaoxiong/outfits/README.md",
+      "sha256": "42c0f88baef425901f5efb531eed5713c5ed358edc9536212bba43cf11e906b6"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/characters/xiaoxiong/poses/README.md",
+      "sha256": "f067fbaa9141d80301a0846425bf3831a6451b595bb60b464336ba06ed146f7b"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/manifest.json",
+      "sha256": "fd09ba52bfb75e46cfe2d60cba784af9835681d7703eef91092c27bb0487d090"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/README.md",
+      "sha256": "bfd390f699a771e54911e7f879bf06e137bd877ea0c765716f6aa7c4b3b901b0"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/reference/core-character-assets-v1.2.png",
+      "sha256": "fb16e77d104bc8fb328dab096c4bd83c04245c5310a18a4b6efee404e438af07"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/shared/interactions/README.md",
+      "sha256": "4743e1d8e95709eafa89705708888ac6ce67b185b6af157319e60ba49cd13aab"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/characters/core-v1.2/shared/style/README.md",
+      "sha256": "da5eef8dba07afaac17d08050fa0f81c29f5631bf5a6c4744f1045d2979e2d80"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/education-goal-template.json",
+      "sha256": "df2cc9c6ea1ff4c1c4956e954ac4f3fa1731d085fe9e1bcab72421516d779113"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/font-license.txt",
+      "sha256": "3c4c22312dc8fb029eaab030a8fee82fbb36006d8b4e6d0eb4a2621b76037cb5"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/font-provenance.json",
+      "sha256": "d88b96fe7fd740c27f3e2267704c13c7d501f44e87e8141ef3652384ea453908"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/icon.svg",
+      "sha256": "49315dda7125ec5fc77ef5f2b96126d8b2121c6e72944b4702972e90f321d3ee"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/kidsbook-print.ttf",
+      "sha256": "16617c167ccd54bb054599d721e99b413803532492fb32a7bcbed108c45bacfc"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/page-manifest-template.json",
+      "sha256": "a9dc5b0e90b7f027cb2c99d7996cba62e32106d14b272beaebd065d78f8c9c42"
+    },
+    {
+      "path": "make-kids-picturebooks/assets/project-template.json",
+      "sha256": "875c8e55eb39b98ae6c3102f9576462d47c55a27bdb9099c5fd71f09d6467cbe"
+    },
+    {
+      "path": "make-kids-picturebooks/evals/layout-negative-controls.csv",
+      "sha256": "4bae8191903fab0ad8b90e7397c48eddf61e37fef8665a7be4c3ef6ee6b4636d"
+    },
+    {
+      "path": "make-kids-picturebooks/evals/layout-pressure-prompts.csv",
+      "sha256": "fd4fcb4bafc61610a26cd022ca0ccc8ae9922e0b8109da16e1e71e788f9f620e"
+    },
+    {
+      "path": "make-kids-picturebooks/evals/layout-unrun-evidence.csv",
+      "sha256": "4c88e4e142725d64b63fdb3f20ae504c72a7cd7441c1870b84b832d31ff95806"
+    },
+    {
+      "path": "make-kids-picturebooks/evals/prompts.csv",
+      "sha256": "f5d355076bb05ee3566e7c9a9c8e13f3f21d247728f886b4b267b92bfc7d5ab1"
+    },
+    {
+      "path": "make-kids-picturebooks/evals/results/baseline-evidence.md",
+      "sha256": "34c0b527e2a0cb5de4b192c011d29abfc8618e38dfdb3a0904d87285e2fe84fb"
+    },
+    {
+      "path": "make-kids-picturebooks/evals/results/baseline-manifest.json",
+      "sha256": "6eaa021a8af866caff85a45a6b66057bac458643c94edae25920d4b6f1cd039e"
+    },
+    {
+      "path": "make-kids-picturebooks/evals/results/baseline-manifest.sha256",
+      "sha256": "84e276d67f5184324984d6d07dba6e2e286cc4dd43278f2214e17a021f1f3655"
+    },
+    {
+      "path": "make-kids-picturebooks/evals/results/baseline.jsonl",
+      "sha256": "9ef05c51daad77092a47746af7413d29da2f96cbd4abfc44ff576824f66da801"
+    },
+    {
+      "path": "make-kids-picturebooks/evals/results/layout-baseline-evidence.md",
+      "sha256": "cccd26f8ce1c9d0b0abe47cd09609b29173edcbbd5998fcaf2b9ab588d325458"
+    },
+    {
+      "path": "make-kids-picturebooks/evals/rubric.md",
+      "sha256": "ce9c6a5d48a1654faf0202cb97f34fe9c65ae7fa04bffea542e876806dd31b74"
+    },
+    {
+      "path": "make-kids-picturebooks/LICENSE",
+      "sha256": "2ba1d60e807883f561fb7ce424f6e844858691aed8856227e5c18abb208e3b67"
+    },
+    {
+      "path": "make-kids-picturebooks/references/acceptance.md",
+      "sha256": "cb0564e2f72d28a07a5518f13d09a9e93717bb9776ab0735ab607db30d4b84bb"
+    },
+    {
+      "path": "make-kids-picturebooks/references/adaptation.md",
+      "sha256": "39b15a20b0ce3fddc150b9804b4448ca3f08d8fb82dfbedd24ddea653db0bf8a"
+    },
+    {
+      "path": "make-kids-picturebooks/references/age-bands.md",
+      "sha256": "261d9106f24adb34a72ba3ec2b2246a22f1cb65ac4adc7807d8abec43b9f7657"
+    },
+    {
+      "path": "make-kids-picturebooks/references/art-direction.md",
+      "sha256": "05b906ace25c566d7dd81baf8336e6983073150fd4fed30dd3f1365bdf30b538"
+    },
+    {
+      "path": "make-kids-picturebooks/references/characters.md",
+      "sha256": "f946cc7b4c43773c395341a897cc6b5ff4d862127bc2d303ed9f4210fbe2b5de"
+    },
+    {
+      "path": "make-kids-picturebooks/references/composition.md",
+      "sha256": "1884c48a5dd3bd173eb5b1a755b1badc9269e9291b731b7541ab5d3f5a5d84a2"
+    },
+    {
+      "path": "make-kids-picturebooks/references/education-goals.md",
+      "sha256": "654362429db1cf88f48b5ce7948d2c3ab3b2952e464fc279665420cbf94f006f"
+    },
+    {
+      "path": "make-kids-picturebooks/references/page-records.md",
+      "sha256": "7d6f51e93879885fdc70fa0649a23a64ef61000fcaacc9a76ae9ffd0c76bc12a"
+    },
+    {
+      "path": "make-kids-picturebooks/references/printing.md",
+      "sha256": "98fb485b00a4a7ddf3c11a977e135ec7532c98ce78c870ef3156902ea49d4b82"
+    },
+    {
+      "path": "make-kids-picturebooks/references/production-workflow.md",
+      "sha256": "edf3c5c252e6b307f772a52859b8921da7769ac604458fa700cbdc76540fe783"
+    },
+    {
+      "path": "make-kids-picturebooks/references/research-input-gate.md",
+      "sha256": "c77ce467162e0efbc8ad80cbaa37188243097a8f4d631e1ab50a7aada045d6be"
+    },
+    {
+      "path": "make-kids-picturebooks/references/review.md",
+      "sha256": "d52ae17b2a012c03e0d91c5bd94907b925069d9323685a50abf2c5610a450ec6"
+    },
+    {
+      "path": "make-kids-picturebooks/references/social-output.md",
+      "sha256": "345632c3c5108c30bf4e74ccf58722dc91eb7e9759479dc7b2fccd2e63806410"
+    },
+    {
+      "path": "make-kids-picturebooks/references/topic-selection.md",
+      "sha256": "ebe521b07fb6f47c9975b097afc81c2e62d5a6769585c8c3abf4e2de4ed8c6c5"
+    },
+    {
+      "path": "make-kids-picturebooks/RELEASE.md",
+      "sha256": "4dfde9cb21bf11b53ae24c011efb838dc6e430926d71cc3f5aed672c1686fa3f"
+    },
+    {
+      "path": "make-kids-picturebooks/requirements.txt",
+      "sha256": "5d1b6f6191cbc49e1354084fd120f74cc01b550eb3d52d4374f9dfadc5a1e534"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/accept_book.py",
+      "sha256": "82b732b7e6be44d31012d569647a1eca842c07d5632deffff4427f91527ca7fa"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/accept_social_book.py",
+      "sha256": "78bd4990daac77c31fbc5c6fa1088c2d95030854db2ec1491f347fd1faf95b4f"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/asset_registry.py",
+      "sha256": "076ea3a3eabab21171af243f013741b146f9128d46d19011a2786447df2aeda7"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/check_eval_results.py",
+      "sha256": "01a26f4bc0f8c763e116b4115ac0137353b681910ef70df4c61422724ea4ac80"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/content_gate.py",
+      "sha256": "aafba7d5515bf54771efd1cd0cbe5fa5bd9e3a7151553c3c00329d9e29aa9dc5"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/export_book.py",
+      "sha256": "1648a7db42478eeca5b91553e06b7fd0792a7ee7ca5c0a27e1d85b4cbe6e83d7"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/generation_queue.py",
+      "sha256": "d168b4725711496177f79fdd3ce2f758187c22f7a3d61cb450122e2ee3ded1bc"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/impose_booklet.py",
+      "sha256": "76319c8bef92817c51786ea1e466cea4d98414d2a868ececd3f1bf91d3cb452a"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/layout_design.py",
+      "sha256": "d69b30e5eb9dfdc5a789bbc3e9e574762141298086c1de91a9c19f27f22976a3"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/layout_styles.py",
+      "sha256": "67e455342ec6b8bcb9aedc824447c4505549e436574fb6cea4f608c99f1df45d"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/migrate_social_only_layout.py",
+      "sha256": "99af539c9bd28e00372fc948ed671d23052c453c1629589e46b0e563fce83751"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/package_project.py",
+      "sha256": "3f0bc1c3977cd1397b50c40cc4df2f6cc75e9c22d6bed7d7cc547bfdea44b960"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/package_skill.py",
+      "sha256": "7e9d674ad382a7a2c8508eb404e5494b7e082a06aad0392cad95f9ee1a7add8c"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/preflight_image_generation.py",
+      "sha256": "66c3bf1c5a88a969b08cb403d2a44ea06e6a27bbca1039abcbe4020f3008259c"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/prepare_font.py",
+      "sha256": "ae568f51dfdc1125275c467ec205e2bbf66b29c45939cc1caf026bad6454b229"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/production_metrics.py",
+      "sha256": "93b997b205086d813967116202ae4a06851fe38e45ebe311f860899bf96a6eac"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/project_paths.py",
+      "sha256": "48e4655e5a164832ab28145a333701bf57bbaafa22bebf8df741f637bc2a9e76"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/project_state.py",
+      "sha256": "65b82b57813835dcd7d280614ecfb961963973e410e44acdd478112f31203803"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/render_book.py",
+      "sha256": "3fab754104eb835195af1cd3badb714bb679e69bb7e799600c1a0b33f9c3860c"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/render_contact_sheet.py",
+      "sha256": "cf2ceed0aae8ae692bb805fa7057a8fae521574251f4ca1e020744c39a8df1ba"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/render_social.py",
+      "sha256": "65d3c1beba4f3ec7ac9148746046cd0e2d002783fee572a159b8a07b79ad107c"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/render_social_book.py",
+      "sha256": "e739093bf034b0356e61ec3732926589fac2be16172a519f348ede297993c383"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/validate_exports.py",
+      "sha256": "e1b5155df08b7f34ad81f09a145fedf20d2d1317b9e825e2ccea5ae9966dc29f"
+    },
+    {
+      "path": "make-kids-picturebooks/scripts/validate_page_manifest.py",
+      "sha256": "e98e74de3411ce483abcb6c86833f5be17bcd230a1ae74ad57d562aee49a98cb"
+    },
+    {
+      "path": "make-kids-picturebooks/SKILL.md",
+      "sha256": "4aaab5a019d3037589bd59c88c67c499eaaf87d5a8ae8fac6f10d6ac2df54c66"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/images/page-01.png",
+      "sha256": "ab0f799f18f5f6ee33424642843c573f5822a0df8533d824e2e954b90670696a"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/images/page-02.png",
+      "sha256": "d9a7b712f5b2be8ab9be79717b3bfc419d3f2bf784d55ebe0261683a5ed35608"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/images/page-03.png",
+      "sha256": "643d31aac7efb6267ee2ecd8c85e7e9de9cb239d3e12c471b5bb7f2ad85a4fea"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/images/page-04.png",
+      "sha256": "74487e385901c51f3b3ca3265ebc71bc6bb8c8bb53616be8d33ace27bfcca579"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/layout.json",
+      "sha256": "7d80a952653a8df2da13276fe56b3475b394fec65e6d022252809437e5a483f2"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/README.md",
+      "sha256": "75c4d0a747ca65c6e82b1499e30538e4eb32208cfec567cf1bb9d40e744d3d1c"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/rendered/export-report.json",
+      "sha256": "f035f8d485d42936ddc15d942df3f96ead6e3236a5f7c5ac4fcc8d174686376c"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/rendered/print-pages/page-01.png",
+      "sha256": "fec5c1e76459bc6c1f85b5fb968cce38002e73a35ff1942d8e6f333c2ed17909"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/rendered/print-pages/page-02.png",
+      "sha256": "55bb47dab45c2e7b1ef93451c0f1f76a0b6a082c9d95767f3b418a7d1d4b7ad2"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/rendered/print.pdf",
+      "sha256": "4c53f004a0282902236c7f82d24568d08dd8ab06d7628e42847659697b2134ef"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/rendered/reading-pages/page-01.png",
+      "sha256": "ea4d2c1fc14a8f53a4284f04d925ac5ec626a733f41e0bd8f64dd960dda946b9"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/rendered/reading-pages/page-02.png",
+      "sha256": "aef3b66c32251dc961fc5962adb4c8aac198ccbfa44930fdd51f9625be5f03de"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/rendered/reading-pages/page-03.png",
+      "sha256": "62094442a66f2c4c5e99cf9f9bd0b266021aed70de048048af609751023505af"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/rendered/reading-pages/page-04.png",
+      "sha256": "19a76e0cc6d6ea32fd7147458ec4e8e10b507ca1b7ff2dc830e8c974bd3087a1"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/rendered/reading.pdf",
+      "sha256": "ac8fd3f9a17b3263b58342fc98887c7a908dfc5d2103560cdcb4449ce0957e35"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/social/page-01.png",
+      "sha256": "a170d0f18ab86580ce05d93059ecf83899555f44bb87508fb56e7c800578a9b3"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/social/page-02.png",
+      "sha256": "432b73357b1d183f6c04696f4578b310cfc4700b45257140d1e4c61e2ea86ad6"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/social/page-03.png",
+      "sha256": "653e4a934e8876c0d0d7d3accf04e2b8313b159e76cc60270b0acd5700e33fff"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/fixtures/aesthetic-layout/social/page-04.png",
+      "sha256": "0728e139e3cf66bc3df08c3cc9a2c907d5e46c81fc1c604584cd98c1b0fbf6e1"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/knowledge-input-gate-audit-20261016.md",
+      "sha256": "d73171144bb331d0cf1809a09dd6663646d1c6fcc8a6a482adaed95be925a263"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_acceptance.py",
+      "sha256": "7f5e49b88fe5f079a2c9024050073d1223e9b404f88cadbb359081ee1e9d6bc3"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_asset_registry.py",
+      "sha256": "be74aed48a62072570011282ac68ed895bba7de2114639371418d4ffdfbfb73a"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_character_assets_v12.py",
+      "sha256": "78a42fc96f3da4ec41d91a0f3c2bad90bee5abf08cb4b29e5ab023de1954fee4"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_complete_workflow.py",
+      "sha256": "e730cf66c23600fdc82a93e2fcf466a811e28e7b6aae94dfa23bf26d6ea2746d"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_content_gate.py",
+      "sha256": "aa005adfc129a6d3dc04027e06e2b1da7794433a2361aff22a7704660f1d47dc"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_eval_results.py",
+      "sha256": "7c6bf589d419025bf0248337b3fa7760c98633f7a82c9c19103eea552e801bb5"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_export_book.py",
+      "sha256": "691aa2f8376f95c420526832220d1545f9ba7cbce5db1a51850ae03b150dbcc3"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_generation_queue.py",
+      "sha256": "8c09a6a4e74181dc9631e5f1c940e8a69a2f2c3db3a67bda0ae881b11b03365a"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_image_generation_preflight.py",
+      "sha256": "740966f992d467c761aab0384f654d0f5be8a08dbbd165729582b70ddfb92818"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_impose_booklet.py",
+      "sha256": "84cab4f8bcbe6220e76368d582e737cc577291f154bab7c513bd4334fe82bf3f"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_layout_design.py",
+      "sha256": "fa3a85fed9ee18a5b2cbc279ef9a8962b653c9906020a431a01d574a7635bf42"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_layout_styles.py",
+      "sha256": "732b557941f933664c2d87c1a4a9fcd0d9bb848e9e714d1059a169285c220407"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_package_project.py",
+      "sha256": "3c1fb5f2c9566e80b86a60a7155660d95ef0a6d163d868a072118c590667a1f6"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_page_manifest.py",
+      "sha256": "eeb58107a73bc2cc44130bf48d7ed18ce01a9fc12e5dcee46526db20e6e0e9e4"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_prepare_font.py",
+      "sha256": "30517154052a8b2585fb912828b0d4d44f3684e8ff4ac83d57fcc8944eb58fcf"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_production_metrics.py",
+      "sha256": "7ce881a5564c269b796f6ad6d1f0ddc6d1eae7541e46546a3ef01dbb90b785b2"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_project_paths.py",
+      "sha256": "4bc0c9ff12c87a603439a4a8dfdbbe719f799c179bc825e3ac9e73839f945374"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_project_state.py",
+      "sha256": "e040f008c890a7379c84ce0b60ad59553c7663431698decb81a3cd745906fd57"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_release_guards.py",
+      "sha256": "dfa4b179945938857637cbafdd229a89349db800d659ee1ffb36481d79b5c17f"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_render_book.py",
+      "sha256": "0070f0f893359561a98335be63b8810ecce47af613bdb4c7a6b84227e638bf6f"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_render_contact_sheet.py",
+      "sha256": "1af8030f440d9a894f927dad35de6dc354fc09497f0c92082510969274f1b9a8"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_render_social.py",
+      "sha256": "8128aab1a1a9c449a4e1e2a0eb022bc2408f1d6f6c89e3706e96b3206ea2b281"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_review_renders.py",
+      "sha256": "52ce0a35679415898da497f53d953af38b004e9d1aef0835b04e1265f7303d34"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_skill_guidance.py",
+      "sha256": "66711eb853e631b735fab8d68690ada2524d49d2c55415f1d9eec9a0f5d061ea"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_skill_package.py",
+      "sha256": "5b85723ab07caaf83fa7b62730fb20d156ab1611776bfa3bf8537c4210168d13"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_social_acceptance.py",
+      "sha256": "ba6ad989ab858465ee300f018c9968c71ce7f2f0e95f18762ecde37843be1b5e"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_social_only_output.py",
+      "sha256": "0ae7d5d1cacd380ddd53ccd9d9b1df88859a8a0c0069bf5bd1d8da710cb996e2"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_topic_selection.py",
+      "sha256": "d8fd4957ec1e2ede0a6cb96a5fc64f2a48cf9f2fcea4e5685fcba6ccc9994060"
+    },
+    {
+      "path": "make-kids-picturebooks/tests/test_validate_exports.py",
+      "sha256": "e7079f085a52e6785086f4d3d75db1e14b7e19e54e326b77e3246a78a1726ebc"
+    }
+  ]
+}

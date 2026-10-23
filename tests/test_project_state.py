@@ -13,6 +13,11 @@ class ProjectTests(unittest.TestCase):
         self.assertIsNotNone(validate_project,'进度接口尚未实现')
         self.assertEqual(validate_project(self.data),[])
         self.assertEqual(next_action(self.data),{'book_id':'b1','stage':'laid_out'})
+    def test_planning_project_without_layout_evidence_remains_readable(self):
+        self.assertEqual(validate_project(self.data),[])
+        self.data['books'][0]['status']='laid_out'
+        self.assertEqual(validate_project(self.data),[])
+        self.assertEqual(next_action(self.data),{'book_id':'b1','stage':'digital_checked'})
     def test_duplicate_ids(self):
         self.assertIsNotNone(validate_project)
         self.data['books'].append(copy.deepcopy(self.data['books'][0]))
@@ -34,6 +39,19 @@ class ProjectTests(unittest.TestCase):
         self.assertIsNotNone(next_action)
         self.data['characters_version']='v2'
         self.assertEqual(next_action(self.data),{'book_id':'b1','stage':'revalidate'})
+
+    def test_legacy_single_book_page_state_uses_canonical_project_metadata(self):
+        self.data.update(adaptation_mode='single_book')
+        self.data['books'][0].update(status='page3_two_reference_returned_nonconforming_candidate')
+        self.data['books'][0].pop('source_version')
+        self.data['books'][0].pop('characters_version')
+        self.data['books'][0].pop('artifacts')
+        self.assertEqual(validate_project(self.data),[])
+        self.assertEqual(next_action(self.data), {
+            'book_id':'b1',
+            'stage':'resume_page_production',
+            'status':'page3_two_reference_returned_nonconforming_candidate',
+        })
     def test_invalid_save_preserves_existing(self):
         self.assertIsNotNone(save_project)
         with tempfile.TemporaryDirectory() as td:

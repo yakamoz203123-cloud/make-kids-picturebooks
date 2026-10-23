@@ -33,6 +33,11 @@ def _skill_files(skill_dir: Path) -> list[tuple[str, Path]]:
         if not path.is_file():
             continue
         relative_parts = path.relative_to(root).parts
+        # MANIFEST.json is generated from the exact archive inputs below.  A
+        # checked-in release manifest must not be copied into the archive and
+        # then duplicated by the generated manifest entry.
+        if relative_parts == ("MANIFEST.json",):
+            continue
         if any(part in EXCLUDED_DIRS for part in relative_parts) or path.suffix == ".pyc":
             continue
         if path.is_symlink():

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "style_master_id": "STYLE-CORE-01",
+  "version": "v1.2",
+  "character_asset_bundle": "core-characters-v1.2",
+  "reference_image": "characters/core-v1.2/reference/core-character-assets-v1.2.png",
+  "reference_sha256": "FB16E77D104BC8FB328DAB096C4BD83C04245C5310A18A4B6EFEE404E438AF07",
+  "immutable": true,
+  "material": ["warm matte paper", "gouache", "crayon texture"],
+  "palette": ["soft pink", "warm red", "blue green", "warm white", "muted neutrals"],
+  "line": "soft rounded crayon lines; no sharp ink outlines",
+  "lighting": "bright, soft, warm daylight with gentle diffuse shadows",
+  "composition": "child eye-level focal action with clear readable evidence",
+  "social_canvas": {"profile": "xiaohongshu-feed-3x4", "aspect_ratio": "3:4", "native_width_px": 1080, "native_height_px": 1440, "text_safe_area": "top or bottom clear zone", "avoid": "interface chrome and watermark"},
+  "prohibitions": ["do not redesign identity features", "no photorealistic children", "no raw child photos", "no harsh neon palette"],
+  "content_hash": "a7acceeacd62b53de21c0fce89603383a5863ec243b26c79d612f62d8ca9bbf9"
+}

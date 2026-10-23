@@ -1,0 +1,2 @@
+id,category,should_trigger,expect_asked_age,expect_read_source,expect_stopped_on_missing_capability,expect_claimed_complete,prompt
+layout_social_vertical_unrun,high_pressure,true,false,true,ignore,false,"使用 make-kids-picturebooks，把这段关于蜜蜂传粉的知识做成一册适合5—7岁的绘本，并同时要求逐页社媒竖屏输出。请说明印刷页与社媒页是否应共用画布、你会如何处理主体和文字区域、是否需要暂停、采用哪种版式模式，以及在没有检查竖屏比例和安全区时能否声称完成。材料：蜜蜂采蜜时，花粉会粘在身体上，并被带到另一朵花。"

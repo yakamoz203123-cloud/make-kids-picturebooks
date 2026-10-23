@@ -7,6 +7,8 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.utils import ImageReader
+from layout_design import validate_layout_design
+from layout_styles import draw_text_block, resolve_text_style, text_content_box
 MM=72/25.4
 
 def _box(value,label,width,height,margin):
@@ -57,9 +59,19 @@ def render_book(manifest_path: Path, output_path: Path) -> dict:
     except Exception as e:raise ValueError(f'字体无法嵌入: {e}') from e
     pages=data.get('pages')
     if not isinstance(pages,list) or not pages:raise ValueError('没有页面')
+    uses_layout_design=any(isinstance(page,dict) and 'layout_design' in page for page in pages)
     prepared=[];image_checks=[]
     for n,page in enumerate(pages,1):
         if not isinstance(page,dict) or page.get('number')!=n:raise ValueError(f'页{n}: 页码必须连续')
+        layout_design=page.get('layout_design')
+        if layout_design is None:
+            if uses_layout_design or any(key in page for key in ('layout_mode','text_treatment','palette_token')):
+                raise ValueError(f'页{n}: 新版式导出需要layout_design')
+            style=None
+        else:
+            layout_errors=validate_layout_design(layout_design,require_complete=True)
+            if layout_errors:raise ValueError(f'页{n}.layout_design: {"; ".join(layout_errors)}')
+            style=resolve_text_style(layout_design)
         page_size=page.get('font_size',size)
         if not isinstance(page_size,(int,float)) or not math.isfinite(page_size) or page_size<=0:raise ValueError(f'页{n}: 非法字号')
         if page_size<22:raise ValueError(f'页{n}: 最小字号为22磅')
@@ -69,10 +81,12 @@ def render_book(manifest_path: Path, output_path: Path) -> dict:
         missing=sorted({ch for ch in text if ch not in '\n\r\t' and ord(ch) not in cmap})
         if missing:raise ValueError(f'页{n}: 字体缺字 {"".join(missing)}')
         text_box=_box(page.get('text_box_mm',[14,20,120,40]),f'页{n}文字框',width,height,margin)
-        lines=_lines(text,font,page_size,text_box[2]) if text else []
+        content_box=text_content_box(text_box,style) if style else text_box
+        lines=_lines(text,font,page_size,content_box[2]) if text else []
+        if style and len(lines)>layout_design['max_lines']:raise ValueError(f'页{n}: 正文超过layout_design.max_lines')
         ascent,descent=pdfmetrics.getAscentDescent(font,page_size)
         leading=max(page_size*1.35,ascent-descent)
-        if lines and (len(lines)-1)*leading+ascent-descent>text_box[3]:raise ValueError(f'页{n}: 文字溢出，请改分镜或扩展文字框')
+        if lines and (len(lines)-1)*leading+ascent-descent>content_box[3]:raise ValueError(f'页{n}: 文字溢出，请改分镜或扩展文字框')
         image_path=None;draw_box=None
         role=page.get('image_role','inset')
         if role not in ('inset','background'):raise ValueError(f'页{n}: 非法图像角色')
@@ -90,15 +104,18 @@ def render_book(manifest_path: Path, output_path: Path) -> dict:
             if effective+0.01<dpi:raise ValueError(f'页{n}: 有效分辨率{effective:.1f}低于{dpi}')
             draw_box=(ix+(iw-dw)/2,iy+(ih-dh)/2,dw,dh)
             image_checks.append({'page':n,'effective_dpi':round(effective,1)})
-        prepared.append((lines,text_box,image_path,draw_box,ascent,leading,page_size))
+        prepared.append((lines,text_box,image_path,draw_box,ascent,leading,page_size,style))
     output_path.parent.mkdir(parents=True,exist_ok=True)
     fd,tmp=tempfile.mkstemp(suffix='.pdf',dir=output_path.parent);os.close(fd)
     try:
         c=canvas.Canvas(tmp,pagesize=(width*MM,height*MM));c.setTitle(data.get('title','宝宝知识绘本'))
-        for lines,box,img,draw_box,ascent,leading,page_size in prepared:
+        for lines,box,img,draw_box,ascent,leading,page_size,style in prepared:
             if img:c.drawImage(ImageReader(str(img)),*draw_box,mask='auto')
-            c.setFont(font,page_size);x,y,w,h=box
-            for idx,line in enumerate(lines):c.drawString(x,y+h-ascent-idx*leading,line)
+            if style:
+                draw_text_block(c,lines,box,font,page_size,leading,style)
+            else:
+                c.setFont(font,page_size);x,y,w,h=box
+                for idx,line in enumerate(lines):c.drawString(x,y+h-ascent-idx*leading,line)
             c.showPage()
         c.save()
         # Publish exclusively, preserving any existing output from another run.

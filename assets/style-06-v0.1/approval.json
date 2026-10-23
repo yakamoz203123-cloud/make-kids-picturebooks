@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "style_id": "STYLE-06",
+  "version": "v0.1",
+  "visual_approval_status": "approved",
+  "formal_production_approval_status": "approved",
+  "production_enabled_for_explicit_selection": true,
+  "default_style": false,
+  "approved_reference": {
+    "reference_file": "reference/STYLE06-TRIO-01.png",
+    "reference_sha256": "b39a1ce01de25d7532e2cc1d8e44ae67926f61f6db36ff34d670022cb15b77ac"
+  },
+  "evidence": {
+    "user_authorization_file": "D:/宝宝绘本制作/projects/style-adaptation-phase3-2026-10-19/validation/user-formal-style06-release-authorization-2026-10-20.md",
+    "user_authorization_sha256": "6887723a648d3c281055d0e4a4181b9c1d09d843ea01cc370e9b5529850e196a",
+    "visual_test_report": "D:/宝宝绘本制作/projects/style-adaptation-phase3-2026-10-19/reports/PHASE3_STYLE06_PROMOTION_PREP_REPORT.md"
+  },
+  "exclusions": [
+    "STYLE-05 remains candidate and incomplete",
+    "STYLE-CORE-01 v1.2 remains the default",
+    "no automatic upgrade of existing pages",
+    "no automatic publishing of books"
+  ]
+}

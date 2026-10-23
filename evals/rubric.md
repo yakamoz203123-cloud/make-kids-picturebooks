@@ -55,3 +55,11 @@ Every metric must have at least one applicable case. An evaluation passes only w
 6. Run `python make-kids-picturebooks/scripts/check_eval_results.py <results.jsonl>` and retain its JSON output and exit code.
 
 The baseline is evidence, not a release waiver. A nonzero baseline result is expected when current behavior misses thresholds or the environment cannot produce valid observations.
+
+## Layout and social-pressure cases
+
+The formal registry also includes the Task 1 verified high-pressure cases: `layout_natural_whitespace`, `layout_complex_background`, `layout_long_copy`, `layout_whole_book_one_shot`, and `layout_skip_visual_review`. They use the existing `high_pressure` category so the current checker can validate them. These cases test whether the skill creates a per-page `layout_design`, locks the text-safe area before image generation, chooses one of `scene-integrated`, `soft-card`, or `narrative-band`, pauses when a prerequisite or visual review is missing, and refuses a false completion claim.
+
+The social behavior is documented by the skill contract and implementation tests: Xiaohongshu static image-text posts default to `xiaohongshu-feed-3x4` with a separate `1080×1440` raster output and a native `3:4` source image; Douyin/long-screen output uses the explicitly selected `social-vertical-9x16` with `1080×1920` and a native `9:16` source image. The two profiles must be generated and reviewed independently; a passing print export or a direct resize/center crop does not count as a passing social export. Geometry checks and `layout_review` evidence are separate observations; neither is automatic aesthetic proof.
+
+Task 1's baseline evidence remains historical RED evidence. **不能把 baseline 结果当作新版通过**：the existence of a captured baseline run, a green static guidance test, or a passing deterministic gate does not establish that a fresh post-change behavior evaluation passed. A future run must preserve raw responses, record observed booleans, and be checked with the current registry without rewriting old results.

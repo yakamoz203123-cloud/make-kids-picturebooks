@@ -1,34 +1,73 @@
 {
+  "output_mode": "pure-images",
+  "social_profile": "xiaohongshu-feed-3x4",
+  "social_canvas": {
+    "width_px": 1080,
+    "height_px": 1440,
+    "source_aspect_ratio": "3:4"
+  },
+  "final_output_contract": "pure-image-delivery-v1",
+  "pure_image_delivery": {
+    "enabled": true,
+    "image_size": "1080x1440",
+    "image_format": "png",
+    "text_is_separate": true,
+    "powerpoint_default": false,
+    "image_model_calls": 0
+  },
+  "character_asset_bundle": "core-characters-v1.2",
+  "character_asset_version": "v1.2",
+  "characters_version": "core-v1.2",
+  "characters_path": "characters/core-v1.2",
   "title": "绘本名称",
-  "page_mm": [
-    148,
-    210
-  ],
-  "font_size": 22,
-  "safe_margin_mm": 10,
-  "target_dpi": 300,
+  "research_packet_path": null,
+  "knowledge_whitelist_path": null,
+  "story_claim_trace_path": null,
+  "social_font_size": 54,
   "pages": [
     {
       "number": 1,
       "text": "绘本名称",
       "image": "images/page-01.png",
-      "image_box_mm": [
-        10,
-        10,
-        128,
-        190
-      ],
-      "text_box_mm": [
-        14,
-        120,
-        120,
-        76
-      ],
       "image_role": "background",
       "text_area_reviewed": false,
-      "kind": "cover"
+      "kind": "story",
+      "knowledge_claims": [],
+      "science_visual_checks": [],
+      "layout_design": {
+        "layout_style_version": "layout-v1",
+        "layout_mode": "scene-integrated",
+        "text_anchor": "top-left",
+        "text_treatment": "natural-space",
+        "text_align": "left",
+        "max_lines": 4,
+        "focal_point": "孩子手中的纸飞机",
+        "text_safe_area": "左上方浅色墙面",
+        "avoid_covering": [
+          "孩子的脸部",
+          "纸飞机"
+        ],
+        "page_rhythm": "establishing",
+        "palette_token": "warm-paper",
+        "status": "pending",
+        "social_layout": {
+          "profile": "xiaohongshu-feed-3x4",
+          "canvas": {
+            "width_px": 1080,
+            "height_px": 1440
+          },
+          "subject_safe_area": [0.50, 0.20, 0.42, 0.54],
+          "text_safe_area": [0.08, 0.12, 0.38, 0.24],
+          "composition_mode": "portrait-full-bleed",
+          "text_placement": "in-scene",
+          "avoid_regions": [
+            "top-ui",
+            "bottom-ui"
+          ],
+          "source_aspect_ratio": "3:4",
+          "status": "pending"
+        }
+      }
     }
-  ],
-  "quality_profile": "print",
-  "quality_approval": null
+  ]
 }

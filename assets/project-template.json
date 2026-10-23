@@ -1,5 +1,21 @@
 {
   "schema_version": 1,
+  "output_mode": "pure-images",
+  "social_profile": "xiaohongshu-feed-3x4",
+  "social_canvas": {
+    "width_px": 1080,
+    "height_px": 1440,
+    "source_aspect_ratio": "3:4"
+  },
+  "final_output_contract": "pure-image-delivery-v1",
+  "pure_image_delivery": {
+    "enabled": true,
+    "image_size": "1080x1440",
+    "image_format": "png",
+    "text_is_separate": true,
+    "powerpoint_default": false,
+    "image_model_calls": 0
+  },
   "title": "未命名知识书",
   "source": {
     "path": "source/book.txt",
@@ -7,19 +23,10 @@
     "coverage": "partial",
     "chapter_index": []
   },
-  "characters_version": "v1",
-  "characters_path": "characters/v1",
-  "printing": {
-    "paper_mm": [
-      297,
-      210
-    ],
-    "page_mm": [
-      148,
-      210
-    ],
-    "duplex": "test-first"
-  },
+  "characters_version": "core-v1.2",
+  "characters_path": "characters/core-v1.2",
+  "character_asset_bundle": "core-characters-v1.2",
+  "character_asset_version": "v1.2",
   "books": [],
   "next_chapter": null,
   "notes": [],
