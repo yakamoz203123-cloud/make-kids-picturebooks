@@ -22,6 +22,6 @@ jobs:
           python -X utf8 -m unittest discover -s tests -p 'test_release_guards.py' -q
           python -X utf8 -m unittest discover -s tests -p 'test_skill_package.py' -q
       - name: Build release package
-        run: python scripts/package_skill.py . dist/make-kids-picturebooks-v0.11.0-preview.zip --version 0.11.0-preview
+        run: python scripts/package_skill.py . "$RUNNER_TEMP/make-kids-picturebooks-v0.11.0-preview.zip" --version 0.11.0-preview
       - name: Verify release manifest
         run: python -c "import json; m=json.load(open('MANIFEST.json', encoding='utf-8')); assert m['version']=='0.11.0-preview'"
