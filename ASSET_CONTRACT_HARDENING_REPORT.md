@@ -55,6 +55,20 @@
 - 第 1 页领取：通过，状态为 `running`。
 - 临时测试未改写原项目；只在副本中补齐 Research/科学审核声明并保留 `content/` 作为唯一契约目录。
 
+## 原项目契约迁移结果
+
+随后已修复本地原项目 `D:/宝宝绘本制作/projects/windmill-3-4-v1`：
+
+- `project.json` 明确声明 `project_profile: production-ready`。
+- 两份 `page-manifest.json` 都补齐 Research 引用和 `science_visual_consistency`，并已同步为相同 SHA-256；`content/` 仍是活动事实源。
+- `validate-packet`、`validate-story`、`validate-manifest` 和 strict preflight 全部通过。
+- strict preflight：9 页，`write_operations=0`，`image_model_calls=0`。
+- 原项目临时队列：初始化成功，要求授权；授权后第 1 页领取成功，状态为 `running`。
+- Research、故事、分镜、布局、知识白名单和 story trace 的基线 SHA-256 全部保持不变。
+- 已在 `D:/宝宝绘本制作/backups/windmill-contract-migration-2026-10-24` 保存修改前的两个 JSON 备份。
+
+科学一致性当前保持 `pending`，正式交付前仍需实际人工/视觉审核后再改为 `passed`。
+
 ## 提交
 
 - `d95f8cf fix: make asset receipts cross-platform`
