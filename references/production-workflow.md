@@ -68,6 +68,16 @@ python3 "$SKILL_DIR/scripts/project_preflight.py" \
 
 strict 回执至少保留 `status`、`phase`、`mode`、`blockers`、`warnings`、`write_operations`、`image_model_calls`、页数、`page_task_assembly.plan_fingerprint` 和研究/claim、批准资产/画风、引用文件的 SHA-256。
 
+正式交付的页面审核问题较多时，可以生成一个只读汇总清单：
+
+```bash
+python3 "$SKILL_DIR/scripts/review_checklist.py" \
+  /absolute/project b01 --version v1 \
+  --output-dir /absolute/reports/review-checklist-v1
+```
+
+它复用 `project_preflight.py --phase pre_delivery --mode report-only` 的结果，把页面问题按页聚合，把图片规格、人工审核和样式审批列为全局问题，并同时生成 `review-checklist.json` 与 `review-checklist.md`。这是人工工作台，不是新的生产阶段；它不会自动把 `pending` 改为 `passed`，也不会覆盖已有输出。
+
 ## 3. 串行逐页生产
 
 一个 `single-coordinator`（单一协调器）初始化一次队列：

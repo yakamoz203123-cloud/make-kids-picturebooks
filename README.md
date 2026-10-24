@@ -27,6 +27,14 @@ PDF、打印、社媒渲染、历史迁移、发布打包和完整性能统计�
 
 默认新项目使用 `production-ready`。`project_preflight.py --phase pre_generation --mode strict` 会检查页面依赖闭包；缺少 prompt、角色参考或生产参考时会明确阻断，不再只依赖页面清单存在。
 
+正式交付需要集中人工处理多个页面问题时，可生成只读审核清单：
+
+```text
+python scripts/review_checklist.py /absolute/project b01 --version v1 --output-dir /absolute/reports/review-checklist-v1
+```
+
+该工具只汇总 `pre_delivery` 的现有结果，输出 JSON 和 Markdown；它不会修改 `pending` 状态、创建队列、调用图片模型或代替人工批准。输出目录必须是新的，工具不会覆盖已有清单。
+
 ## 本地验证
 
 ```text
