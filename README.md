@@ -27,6 +27,8 @@ PDF、打印、社媒渲染、历史迁移、发布打包和完整性能统计�
 
 默认新项目使用 `production-ready`。`project_preflight.py --phase pre_generation --mode strict` 会检查页面依赖闭包；缺少 prompt、角色参考或生产参考时会明确阻断，不再只依赖页面清单存在。
 
+正式 `xiaohongshu-feed-3x4` 页面源图必须实际为 `1080×1440`、RGB、无 alpha；队列缓存和正式交付预检使用同一精确画布契约。比例为 3:4 但尺寸为 `1086×1448` 的历史图片不会被当作正式缓存。`content_gate.py` 的中文 CLI 输出会按 UTF-8 配置，避免 Windows 默认代码页造成误报。
+
 正式交付需要集中人工处理多个页面问题时，可生成只读审核清单：
 
 ```text

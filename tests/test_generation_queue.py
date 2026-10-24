@@ -96,6 +96,30 @@ class GenerationQueueTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def _make_formal_canvas_book(self):
+        manifest = json.loads((self.book / "page-manifest.json").read_text(encoding="utf-8"))
+        storyboard = json.loads((self.book / "storyboard.json").read_text(encoding="utf-8"))
+        layout = json.loads((self.book / "layout.json").read_text(encoding="utf-8"))
+        for document in (manifest, storyboard):
+            for page in document["pages"]:
+                page["profile"] = "xiaohongshu-feed-3x4"
+                page["declared_aspect_ratio"] = "3:4"
+        for page in layout["pages"]:
+            page["profile"] = "xiaohongshu-feed-3x4"
+            page["source_aspect_ratio"] = "3:4"
+            page["social_layout"] = {
+                "profile": "xiaohongshu-feed-3x4",
+                "canvas": {"width_px": 1080, "height_px": 1440},
+                "source_aspect_ratio": "3:4",
+            }
+        (self.book / "page-manifest.json").write_text(
+            json.dumps(manifest), encoding="utf-8"
+        )
+        (self.book / "storyboard.json").write_text(
+            json.dumps(storyboard), encoding="utf-8"
+        )
+        (self.book / "layout.json").write_text(json.dumps(layout), encoding="utf-8")
+
     def test_init_rejects_incomplete_plan_before_creating_queue(self):
         storyboard = json.loads((self.book / "storyboard.json").read_text(encoding="utf-8"))
         storyboard["pages"] = storyboard["pages"][:-1]
@@ -192,6 +216,36 @@ class GenerationQueueTests(unittest.TestCase):
         )
         claimed = self.module.claim_job(self.queue, 3)
         self.assertEqual(claimed["page"], 3)
+
+    def test_formal_profile_rejects_wrong_exact_canvas_on_completion(self):
+        self._make_formal_canvas_book()
+        self._init()
+        self._claim_and_mark_submitted(1)
+        output = self._write_success_image(1, size=(1086, 1448))
+
+        with self.assertRaisesRegex(ValueError, "exact canvas.*1086x1448.*1080x1440"):
+            self.module.complete_job(self.queue, 1, output)
+
+    def test_formal_profile_does_not_cache_wrong_exact_canvas(self):
+        self._make_formal_canvas_book()
+        output = self._write_success_image(1, size=(1086, 1448))
+
+        state = self._init()
+        page_one = next(job for job in state["jobs"] if job["page"] == 1)
+
+        self.assertEqual("pending", page_one["status"])
+        self.assertIn("exact canvas", page_one["last_error"])
+
+    def test_formal_profile_accepts_exact_canvas(self):
+        self._make_formal_canvas_book()
+        self._init()
+        self._claim_and_mark_submitted(1)
+        output = self._write_success_image(1, size=(1080, 1440))
+
+        completed = self.module.complete_job(self.queue, 1, output)
+
+        self.assertEqual("completed", completed["status"])
+        self.assertEqual([1080, 1440], [completed["image_validation"]["width_px"], completed["image_validation"]["height_px"]])
 
     def test_claim_batch_is_atomic_and_bounded(self):
         self._init(max_in_flight=2)

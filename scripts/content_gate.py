@@ -28,6 +28,21 @@ CONCEPT_OUTCOMES = {"include", "borderline", "omit"}
 TRACE_KINDS = {"scientific_claim", "observation", "inference", "dialogue", "fictional_story"}
 
 
+def configure_cli_encoding() -> None:
+    """Make human-readable JSON safe for Windows consoles using a legacy code page."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if not callable(reconfigure):
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+        except (OSError, ValueError):
+            # A host may expose a stream that advertises reconfigure but does
+            # not allow changing it. The JSON file/output contract must still
+            # remain usable by the caller.
+            continue
+
+
 def _error(code: str, message: str) -> str:
     return f"[{code}] {message}"
 
@@ -539,6 +554,7 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    configure_cli_encoding()
     args = _parser().parse_args(argv)
     if args.command == "validate-packet":
         result = validate_research_packet(args.packet_dir)

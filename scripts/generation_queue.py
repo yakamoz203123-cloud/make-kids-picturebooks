@@ -47,6 +47,10 @@ SOCIAL_PROFILE_ASPECT_RATIOS = {
     "xiaohongshu-feed-3x4": "3:4",
     "social-vertical-9x16": "9:16",
 }
+SOCIAL_PROFILE_CANVASES = {
+    "xiaohongshu-feed-3x4": (1080, 1440),
+    "social-vertical-9x16": (1080, 1920),
+}
 
 
 def _now() -> str:
@@ -348,7 +352,11 @@ def _parse_aspect_ratio(value: str) -> tuple[int, int]:
     return numerator, denominator
 
 
-def _validate_image_file(path: Path, declared_aspect_ratio: str | None = None) -> dict[str, Any]:
+def _validate_image_file(
+    path: Path,
+    declared_aspect_ratio: str | None = None,
+    expected_canvas: tuple[int, int] | None = None,
+) -> dict[str, Any]:
     """Verify, reopen, fully decode, and validate one generated image."""
     try:
         with Image.open(path) as image:
@@ -375,6 +383,12 @@ def _validate_image_file(path: Path, declared_aspect_ratio: str | None = None) -
             raise ValueError(
                 f"output image aspect ratio must be {declared_aspect_ratio}: {width}x{height}"
             )
+    if expected_canvas is not None and (width, height) != expected_canvas:
+        expected_width, expected_height = expected_canvas
+        raise ValueError(
+            "output image exact canvas is "
+            f"{width}x{height}; expected {expected_width}x{expected_height}"
+        )
     divisor = math.gcd(width, height)
     return {
         "width_px": width,
@@ -570,6 +584,36 @@ def _declared_aspect_ratio(*pages: dict[str, Any]) -> str | None:
     return values[0] if values else None
 
 
+def _declared_canvas(*pages: dict[str, Any]) -> tuple[int, int] | None:
+    values: list[tuple[int, int]] = []
+    for page in pages:
+        if not isinstance(page, dict):
+            continue
+        containers = [page]
+        nested_layout = page.get("layout_design")
+        if isinstance(nested_layout, dict):
+            containers.append(nested_layout)
+        for container in containers:
+            social_layout = container.get("social_layout")
+            if isinstance(social_layout, dict):
+                containers.append(social_layout)
+            profile = container.get("profile")
+            if profile in SOCIAL_PROFILE_CANVASES:
+                values.append(SOCIAL_PROFILE_CANVASES[profile])
+            for field in ("canvas", "source_canvas", "expected_canvas"):
+                canvas = container.get(field)
+                if not isinstance(canvas, dict):
+                    continue
+                width = canvas.get("width_px")
+                height = canvas.get("height_px")
+                if type(width) is int and type(height) is int and width > 0 and height > 0:
+                    values.append((width, height))
+    distinct = set(values)
+    if len(distinct) > 1:
+        raise ValueError(f"page declares conflicting canvases: {sorted(distinct)}")
+    return values[0] if values else None
+
+
 def _page_number(page: dict[str, Any], index: int) -> int:
     raw = page.get("page", index)
     try:
@@ -684,6 +728,11 @@ def _plan(book_dir: Path) -> dict[str, Any]:
             storyboard_by_page[number],
             layout_page,
         )
+        expected_canvas = _declared_canvas(
+            page,
+            storyboard_by_page[number],
+            layout_page,
+        )
         prompt_hash = _file_hash(prompt_path)
         ref_hash = _file_hash(character_path)
         production_hash = _file_hash(production_path)
@@ -700,6 +749,7 @@ def _plan(book_dir: Path) -> dict[str, Any]:
         )
         layout_fingerprint = {
             "source_aspect_ratio": declared_aspect_ratio,
+            "expected_canvas": list(expected_canvas) if expected_canvas else None,
             "style_version": style_value,
         }
         base_fingerprint = _canonical_hash(
@@ -732,7 +782,11 @@ def _plan(book_dir: Path) -> dict[str, Any]:
         output_error = None
         if output_path.is_file():
             try:
-                image_validation = _validate_image_file(output_path, declared_aspect_ratio)
+                image_validation = _validate_image_file(
+                    output_path,
+                    declared_aspect_ratio,
+                    expected_canvas,
+                )
             except ValueError as exc:
                 output_error = str(exc)
             else:
@@ -773,6 +827,7 @@ def _plan(book_dir: Path) -> dict[str, Any]:
                 "story_dependency_scope": story_dependency_scope,
                 "story_dependency_fingerprint": story_dependency_fingerprint,
                 "declared_aspect_ratio": declared_aspect_ratio,
+                "expected_canvas": list(expected_canvas) if expected_canvas else None,
                 "output_path": output_relative,
                 "previous_output_path": None,
                 "output_sha256": output_sha256,
@@ -1076,6 +1131,7 @@ def init_queue(
                     "story_dependency_scope",
                     "story_dependency_fingerprint",
                     "declared_aspect_ratio",
+                    "expected_canvas",
                     "asset_dependency_fingerprint",
                     "reference_assets",
                 ):
@@ -1083,7 +1139,17 @@ def init_queue(
                 output = _book_path_from_queue({"book_dir": str(book_dir)}, preserved.get("output_path", ""))
                 if preserved.get("status") in DONE_STATUSES:
                     try:
-                        image_validation = _validate_image_file(output, fresh.get("declared_aspect_ratio"))
+                        expected_canvas = fresh.get("expected_canvas")
+                        expected_canvas_tuple = (
+                            tuple(expected_canvas)
+                            if isinstance(expected_canvas, list) and len(expected_canvas) == 2
+                            else None
+                        )
+                        image_validation = _validate_image_file(
+                            output,
+                            fresh.get("declared_aspect_ratio"),
+                            expected_canvas_tuple,
+                        )
                     except ValueError as exc:
                         preserved["status"] = "pending"
                         preserved["output_sha256"] = None
@@ -1273,7 +1339,17 @@ def complete_job(
         relative = _relative_to_book(Path(state["book_dir"]), output)
         if not output.is_file():
             raise ValueError(f"completed image does not exist: {output}")
-        image_validation = _validate_image_file(output, job.get("declared_aspect_ratio"))
+        expected_canvas = job.get("expected_canvas")
+        expected_canvas_tuple = (
+            tuple(expected_canvas)
+            if isinstance(expected_canvas, list) and len(expected_canvas) == 2
+            else None
+        )
+        image_validation = _validate_image_file(
+            output,
+            job.get("declared_aspect_ratio"),
+            expected_canvas_tuple,
+        )
         job.update(
             {
                 "status": "completed",
