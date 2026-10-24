@@ -73,3 +73,26 @@ def test_changed_research_evidence_invalidates_preflight_receipt(tmp_path: Path)
     whitelist.write_text("{\"changed\": true}\n", encoding="utf-8")
 
     assert not project_preflight._is_preflight_receipt_reusable(root, "b01", "v1", planned, receipt)
+
+
+def test_queue_init_passes_one_plan_to_preflight(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    book, queue = _production_paths(root)
+
+    with patch.object(project_preflight, "_plan", side_effect=AssertionError("plan rebuilt")):
+        state = generation_queue.init_queue(book, queue)
+
+    assert state["workflow_gate"]["status"] == "passed"
+    assert state["page_count"] == 1
+
+
+def test_queue_reinitialization_reuses_valid_preflight_receipt(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    book, queue = _production_paths(root)
+    first = generation_queue.init_queue(book, queue)
+
+    with patch.object(project_preflight, "preflight_project", side_effect=AssertionError("full preflight rerun")):
+        second = generation_queue.init_queue(book, queue)
+
+    assert second["workflow_gate"] == first["workflow_gate"]
+    assert second["preflight_receipt"] == first["preflight_receipt"]

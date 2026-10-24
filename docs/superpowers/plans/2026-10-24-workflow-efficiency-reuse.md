@@ -76,21 +76,21 @@ git commit -m "perf: add reusable preflight input fingerprints"
 - `_pre_generation_gate(..., existing_gate: Mapping[str, Any] | None = None) -> dict[str, Any]` may return the existing valid receipt or a fresh receipt.
 - `init_queue` must pass its single `planned` object to preflight and preserve the current queue schema/output behavior.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add integration tests proving first initialization does not call preflight’s `_plan` a second time, a second initialization reuses a valid receipt without calling full preflight, and a changed tracked input falls back to strict validation rather than reusing the receipt.
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run: `python -m pytest tests/test_workflow_efficiency.py -q`
 
 Expected: the tests fail because queue initialization always runs a fresh preflight and rebuilds the plan.
 
-- [ ] **Step 3: Implement minimal queue reuse**
+- [x] **Step 3: Implement minimal queue reuse**
 
 Load an existing queue snapshot before the gate check, validate that it belongs to the same book, attempt receipt reuse, and otherwise run strict preflight with the already-built plan. Preserve the existing fallback for legacy queues and keep queue writes under the existing mutation lock.
 
-- [ ] **Step 4: Run focused tests and existing queue tests**
+- [x] **Step 4: Run focused tests and existing queue tests**
 
 Run: `python -m pytest tests/test_workflow_efficiency.py tests/test_generation_queue.py -q`
 

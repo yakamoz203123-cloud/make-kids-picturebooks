@@ -19,7 +19,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import Any
+from typing import Any, Mapping
 
 from PIL import Image
 
@@ -1168,6 +1168,7 @@ def _pre_generation_gate(
     planned: dict[str, Any],
     *,
     allow_standalone_legacy: bool = True,
+    existing_gate: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return a bound strict gate receipt for production projects.
 
@@ -1192,7 +1193,16 @@ def _pre_generation_gate(
             "created_at": _now(),
         }
 
-    from project_preflight import preflight_project
+    from project_preflight import _is_preflight_receipt_reusable, preflight_project
+
+    if existing_gate and _is_preflight_receipt_reusable(
+        project_root,
+        book_dir.parent.name,
+        book_dir.name,
+        planned,
+        existing_gate,
+    ):
+        return copy.deepcopy(dict(existing_gate))
 
     report = preflight_project(
         project_root,
@@ -1200,6 +1210,7 @@ def _pre_generation_gate(
         version=book_dir.name,
         phase="pre_generation",
         mode="strict",
+        planned=planned,
     )
     if report.get("status") != "passed":
         blockers = report.get("blockers") if isinstance(report.get("blockers"), list) else []
@@ -1217,6 +1228,9 @@ def _pre_generation_gate(
         "version": report.get("version"),
         "plan_fingerprint": report.get("plan_fingerprint"),
         "workflow_rules_version": report.get("workflow_rules_version", WORKFLOW_RULES_VERSION),
+        "preflight_input_fingerprint": report.get("preflight_input_fingerprint"),
+        "global_input_fingerprint": report.get("global_input_fingerprint"),
+        "preflight_input_snapshot": report.get("preflight_input_snapshot", []),
         "created_at": _now(),
     }
 
@@ -1261,20 +1275,20 @@ def init_queue(
         raise ValueError("max_attempts must be positive")
     book_dir = Path(book_dir).resolve()
     queue_path = Path(queue_path).resolve()
+    existing: dict[str, Any] | None = None
+    if queue_path.exists():
+        existing = _load_queue(queue_path)
+        if Path(existing["book_dir"]).resolve() != book_dir:
+            raise ValueError("existing queue belongs to a different book directory")
     planned = _plan(book_dir)
     workflow_gate = _pre_generation_gate(
         book_dir,
         planned,
         allow_standalone_legacy=allow_standalone_legacy,
+        existing_gate=existing.get("workflow_gate") if existing else None,
     )
     requires_user_authorization = workflow_gate.get("mode") == "production"
     with _queue_mutation_lock(queue_path):
-        existing: dict[str, Any] | None = None
-        if queue_path.exists():
-            existing = _load_queue(queue_path)
-            if Path(existing["book_dir"]).resolve() != book_dir:
-                raise ValueError("existing queue belongs to a different book directory")
-
         old_by_page = {int(job["page"]): job for job in existing.get("jobs", [])} if existing else {}
         jobs = []
         for fresh in planned["jobs"]:
