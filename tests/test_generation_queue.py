@@ -1,4 +1,5 @@
 import importlib.util
+import io
 import json
 import os
 import shutil
@@ -77,6 +78,20 @@ class GenerationQueueTests(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         image = Image.new("RGB", size, color)
         image.save(path, format="PNG")
+
+    def test_cli_requires_explicit_standalone_legacy_switch(self):
+        with patch("sys.stdout", new=io.StringIO()):
+            self.assertEqual(self.module.main(["init", str(self.book), str(self.queue)]), 2)
+        self.assertFalse(self.queue.exists())
+
+        with patch("sys.stdout", new=io.StringIO()):
+            self.assertEqual(
+                self.module.main(["init", str(self.book), str(self.queue), "--standalone-legacy"]),
+                0,
+            )
+        self.assertTrue(self.queue.exists())
+        state = json.loads(self.queue.read_text(encoding="utf-8"))
+        self.assertEqual(state["workflow_gate"]["mode"], "standalone-legacy")
 
     def _write_success_image(self, page, *, size=(1024, 1024), color=None):
         output = self.book / "images" / f"page-{page:02d}.png"

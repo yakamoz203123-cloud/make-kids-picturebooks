@@ -1163,7 +1163,12 @@ def _find_project_root(book_dir: Path) -> Path | None:
     return None
 
 
-def _pre_generation_gate(book_dir: Path, planned: dict[str, Any]) -> dict[str, Any]:
+def _pre_generation_gate(
+    book_dir: Path,
+    planned: dict[str, Any],
+    *,
+    allow_standalone_legacy: bool = True,
+) -> dict[str, Any]:
     """Return a bound strict gate receipt for production projects.
 
     Low-level standalone queue fixtures do not have a project contract and
@@ -1172,6 +1177,11 @@ def _pre_generation_gate(book_dir: Path, planned: dict[str, Any]) -> dict[str, A
     """
     project_root = _find_project_root(book_dir)
     if project_root is None:
+        if not allow_standalone_legacy:
+            raise RuntimeError(
+                "PRE_GENERATION_PROJECT_REQUIRED: standalone queue creation requires "
+                "--standalone-legacy"
+            )
         return {
             "schema_version": 1,
             "status": "not_applicable",
@@ -1243,6 +1253,7 @@ def init_queue(
     *,
     max_in_flight: int = DEFAULT_MAX_IN_FLIGHT,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    allow_standalone_legacy: bool = True,
 ) -> dict[str, Any]:
     if max_in_flight < 1 or max_in_flight > 3:
         raise ValueError("max_in_flight must be between 1 and 3")
@@ -1251,7 +1262,11 @@ def init_queue(
     book_dir = Path(book_dir).resolve()
     queue_path = Path(queue_path).resolve()
     planned = _plan(book_dir)
-    workflow_gate = _pre_generation_gate(book_dir, planned)
+    workflow_gate = _pre_generation_gate(
+        book_dir,
+        planned,
+        allow_standalone_legacy=allow_standalone_legacy,
+    )
     requires_user_authorization = workflow_gate.get("mode") == "production"
     with _queue_mutation_lock(queue_path):
         existing: dict[str, Any] | None = None
@@ -2013,6 +2028,11 @@ def _parser() -> argparse.ArgumentParser:
     init.add_argument("queue_json", type=Path)
     init.add_argument("--max-in-flight", type=int, default=DEFAULT_MAX_IN_FLIGHT)
     init.add_argument("--max-attempts", type=int, default=DEFAULT_MAX_ATTEMPTS)
+    init.add_argument(
+        "--standalone-legacy",
+        action="store_true",
+        help="allow a low-level queue without a project.json contract",
+    )
     status_parser = subparsers.add_parser("status")
     status_parser.add_argument("queue_json", type=Path)
     claim = subparsers.add_parser("claim")
@@ -2072,7 +2092,13 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         if args.command == "init":
-            result = init_queue(args.book_dir, args.queue_json, max_in_flight=args.max_in_flight, max_attempts=args.max_attempts)
+            result = init_queue(
+                args.book_dir,
+                args.queue_json,
+                max_in_flight=args.max_in_flight,
+                max_attempts=args.max_attempts,
+                allow_standalone_legacy=args.standalone_legacy,
+            )
         elif args.command == "status":
             result = status(args.queue_json)
         elif args.command == "claim":
