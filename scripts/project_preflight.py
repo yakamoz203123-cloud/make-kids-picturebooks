@@ -46,6 +46,7 @@ DELIVERY_REQUIRED_FILES = {
     "education-goal.json",
     "asset-binding-plan.json",
 }
+PAGE_SCOPED_INPUT_FILES = {"story.md", "storyboard.json", "page-manifest.json", "layout.json"}
 
 
 class PreflightError(ValueError):
@@ -58,6 +59,129 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _snapshot_path(root: Path, path: Path, *, scope: str) -> dict[str, Any]:
+    """Capture one deterministic preflight input without reading generated images."""
+    resolved = path.resolve()
+    try:
+        relative = resolved.relative_to(root.resolve()).as_posix()
+    except ValueError:
+        relative = str(resolved)
+    if resolved.is_file():
+        return {"path": relative, "scope": scope, "kind": "file", "sha256": _sha256(resolved)}
+    if resolved.is_dir():
+        entries = [
+            {"path": child.resolve().relative_to(root.resolve()).as_posix(), "sha256": _sha256(child)}
+            for child in sorted(resolved.rglob("*"))
+            if child.is_file()
+        ]
+        return {"path": relative, "scope": scope, "kind": "directory", "entries": entries}
+    return {"path": relative, "scope": scope, "kind": "missing"}
+
+
+def _preflight_input_snapshot(
+    *,
+    root: Path,
+    book_dir: Path,
+    content_dir: Path,
+    manifest: Mapping[str, Any],
+    project_data: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    """Return the small, deterministic input set that can invalidate preflight."""
+    candidates: list[tuple[Path, str]] = [(root / "project.json", "global")]
+
+    for name in DELIVERY_REQUIRED_FILES | {"story.md"}:
+        scope = "page" if name in PAGE_SCOPED_INPUT_FILES else "global"
+        candidates.append((content_dir / name, scope))
+        candidates.append((book_dir / name, "global"))
+
+    source = project_data.get("source")
+    references: list[Any] = [
+        manifest.get("research_packet_path"),
+        manifest.get("knowledge_whitelist_path"),
+        manifest.get("story_claim_trace_path"),
+    ]
+    if isinstance(source, Mapping):
+        references.append(source.get("path"))
+    for value in references:
+        if not _nonempty(value):
+            continue
+        resolved = _resolve_local_reference(value, book_dir=book_dir, content_dir=content_dir, root=root)
+        if resolved is not None:
+            candidates.append((resolved, "global"))
+
+    bundles = {str(page.get("character_asset_bundle", "")).strip() for page in manifest.get("pages", []) if isinstance(page, Mapping) and _nonempty(page.get("character_asset_bundle"))}
+    for bundle in sorted(bundles):
+        aliases = [bundle]
+        if bundle.startswith("core-characters-"):
+            aliases.append("core-" + bundle.removeprefix("core-characters-"))
+        for alias in aliases:
+            candidates.append((content_dir / "characters" / alias / "approval.json", "global"))
+
+    style_ids = {str(page.get("style_master_id", "")).strip() for page in manifest.get("pages", []) if isinstance(page, Mapping) and _nonempty(page.get("style_master_id"))}
+    style_versions = {str(page.get("style_master_version", "")).strip() for page in manifest.get("pages", []) if isinstance(page, Mapping) and _nonempty(page.get("style_master_version"))}
+    for style_id in sorted(style_ids):
+        for style_version in sorted(style_versions):
+            slug = style_id.lower()
+            candidates.append((content_dir / "styles" / f"{slug}-{style_version}" / "approval.json", "global"))
+            candidates.append((content_dir / "styles" / f"{slug}-{style_version.replace('.', '')}" / "approval.json", "global"))
+
+    unique: dict[tuple[str, str], tuple[Path, str]] = {}
+    for path, scope in candidates:
+        key = (str(path.resolve()), scope)
+        unique[key] = (path, scope)
+    return sorted(
+        [_snapshot_path(root, path, scope=scope) for path, scope in unique.values()],
+        key=lambda item: (item["scope"], item["path"]),
+    )
+
+
+def _snapshot_fingerprint(snapshot: list[dict[str, Any]], *, scope: str | None = None) -> str:
+    selected = snapshot if scope is None else [item for item in snapshot if item.get("scope") == scope]
+    return _canonical_hash(selected)
+
+
+def _is_preflight_receipt_reusable(
+    project: str | Path,
+    book_id: str,
+    version: str | None,
+    planned: Mapping[str, Any],
+    receipt: Mapping[str, Any],
+) -> bool:
+    """Check a stored production receipt without rerunning semantic gates."""
+    if not isinstance(receipt, Mapping):
+        return False
+    try:
+        root = _project_root(project)
+        book_dir = _book_dir(root, book_id, version)
+        content_dir, _layout = _resolve_content_layout(book_dir)
+        project_data = _read_json(root / "project.json")
+        manifest = _read_json(content_dir / "page-manifest.json")
+        snapshot = _preflight_input_snapshot(
+            root=root,
+            book_dir=book_dir,
+            content_dir=content_dir,
+            manifest=manifest,
+            project_data=project_data,
+        )
+    except (DeliveryError, OSError, PreflightError, ValueError, TypeError):
+        return False
+
+    expected = {
+        "schema_version": 1,
+        "status": "passed",
+        "mode": "production",
+        "phase": "pre_generation",
+        "project_root": str(root),
+        "book_key": book_dir.parent.name,
+        "version": book_dir.name,
+        "plan_fingerprint": planned.get("plan_fingerprint"),
+        "workflow_rules_version": WORKFLOW_RULES_VERSION,
+        "preflight_input_fingerprint": _snapshot_fingerprint(snapshot),
+        "global_input_fingerprint": _snapshot_fingerprint(snapshot, scope="global"),
+    }
+    return all(receipt.get(key) == value for key, value in expected.items()) and receipt.get("preflight_input_snapshot") == snapshot
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -524,6 +648,7 @@ def preflight_project(
     phase: str = "pre_generation",
     mode: str = "report-only",
     output: str | Path | None = None,
+    planned: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run a read-only preflight using one shared rule set for both modes."""
     if phase not in PHASES:
@@ -768,7 +893,7 @@ def preflight_project(
 
     plan = None
     try:
-        plan = _plan(content_dir if layout == "content" else book_dir)
+        plan = dict(planned) if planned is not None else _plan(content_dir if layout == "content" else book_dir)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         report["blockers"].append(f"TASK_ASSEMBLY:{exc}")
     else:
@@ -804,6 +929,20 @@ def preflight_project(
             target_blocks, target_warnings = _output_target_check(output)
             report["blockers"].extend(target_blocks)
             report["warnings"].extend(target_warnings)
+
+    try:
+        snapshot = _preflight_input_snapshot(
+            root=root,
+            book_dir=book_dir,
+            content_dir=content_dir,
+            manifest=manifest,
+            project_data=project_data,
+        )
+        report["preflight_input_snapshot"] = snapshot
+        report["preflight_input_fingerprint"] = _snapshot_fingerprint(snapshot)
+        report["global_input_fingerprint"] = _snapshot_fingerprint(snapshot, scope="global")
+    except (OSError, ValueError, TypeError) as exc:
+        report["blockers"].append(f"PREFLIGHT_INPUT_SNAPSHOT_FAILED:{exc}")
 
     report["status"] = "passed" if not report["blockers"] else "blocked"
     if report["status"] == "passed":
