@@ -53,7 +53,7 @@
 
 分镜完成后先做整本视觉节奏，再逐页选镜头；每页一个主要视觉任务，写清故事任务、视觉主角、关键动作、科学证据、构图理由、文字安全区和前后页状态；最后做相邻页重复审计，只保留有价值的重复。
 
-Research 输入包先运行 `content_gate.py validate-packet`，生成 `knowledge-whitelist.json`；故事完成后运行 `content_gate.py validate-story` 和 `story-claim trace`。教育目标卡的字段要求见 [education-goals.md](education-goals.md)。
+Research 输入包先运行 `content_gate.py validate-packet`，生成 `knowledge-whitelist.json`；故事完成后运行 `content_gate.py validate-story`，页面完成后运行 `content_gate.py validate-manifest`。`page-manifest.json` 是页面科学证据的唯一事实来源，`storyboard.json` 不复制同一组页面字段。教育目标卡的字段要求见 [education-goals.md](education-goals.md)。
 
 ## 2. 一次整本 strict 预检
 
@@ -66,7 +66,7 @@ python3 "$SKILL_DIR/scripts/project_preflight.py" \
 
 预检只读，不创建队列、不写项目、不调用图片模型。`report-only` 只用于诊断。`generation_queue.py init` 在这些前置门禁之前不能运行；它不会替代 Research、教育目标、内容、strict-assets 或比例检查，只验证结构输入。正式 `xiaohongshu-feed-3x4` 页面源图的期望画布是精确 `1080×1440`、RGB、无 alpha；队列缓存检查和 `pre_delivery` 正式图片检查必须使用同一契约，不能只因为图片比例为 3:4 就复用其他尺寸。
 
-strict 回执至少保留 `status`、`phase`、`mode`、`blockers`、`warnings`、`write_operations`、`image_model_calls`、页数、`page_task_assembly.plan_fingerprint` 和研究/claim、批准资产/画风、引用文件的 SHA-256。
+strict 回执至少保留 `status`、`phase`、`mode`、`blockers`、`warnings`、`write_operations`、`image_model_calls`、页数、`page_task_assembly.plan_fingerprint`、内容闸门 evidence，以及研究/claim、批准资产/画风、引用文件的 SHA-256。
 
 正式交付的页面审核问题较多时，可以生成一个只读汇总清单：
 

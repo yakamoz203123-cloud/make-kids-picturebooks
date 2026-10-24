@@ -12,7 +12,7 @@
 - Windows 默认控制台下，内容闸门可以稳定输出中文 JSON，不再因 GBK 编码导致 `UnicodeEncodeError`。
 - `delivery-input-repaired` 已生成并审核 9 页正式图片；原 `delivery-input` 未被修改。
 - 历史原图已保留在恢复目录；没有删除或覆盖原始资产。
-- 队列、内容闸门、故事闸门、两阶段预检和最终审核清单均通过。
+- 队列、故事追溯闸门、页面 manifest 科学闸门、两阶段预检和最终审核清单均通过。
 
 ## 2. 根因
 
@@ -45,6 +45,14 @@
 - 新增正式画布、错误尺寸拒绝、正确尺寸接受和 Windows UTF-8 输出测试。
 - 新增设计文档和实施计划，记录范围、非目标、风险和回滚边界。
 
+### 3.4 内容闸门链路收敛
+
+- 增加 `validate-manifest`，复用既有科学校验逻辑，不复制页面证据。
+- `project_preflight.py` 在项目声明 Research 白名单和 story trace 时自动运行故事追溯与 manifest 科学视觉闸门。
+- `review_checklist.py` 直接展示预检产生的 `CONTENT_GATE` 阻断，不再出现“审核清单通过但内容闸门未运行”的假绿。
+- `page-manifest.json` 增加唯一的全书级 `science_visual_consistency`；第 9 页补齐 `claim-03`、`claim-05` 的视觉检查。
+- `storyboard.json` 未复制页面科学证据，保持故事规划职责。
+
 ## 4. 项目修复结果
 
 修复对象：
@@ -61,22 +69,27 @@
 - 旧队列已可恢复地移动到 `review/recovery-candidates/production-queue-before-formal-canvas-contract.json`。
 - 原始 `1086×1448` 图片已保留在：
   `review/recovery-candidates/original-native-1086x1448/`
+- manifest 内容闸门现已通过，未再依赖旧版 `storyboard.json` 的重复字段。
 
 ## 5. 验证证据
 
 ### Skill 回归测试
 
 ```text
-66 passed, 1 skipped, 12 subtests passed
+70 passed, 1 skipped, 12 subtests passed
 29 guidance tests OK
 7 release guard tests OK
 compileall passed
 git diff --check passed
 ```
 
+完整 pytest 还执行了仓库中全部测试，结果为 `465 passed, 2 skipped, 14 failed, 431 subtests passed`。14 个失败集中在既有角色资产 v1.2 批准状态、旧资产包内容和包内哈希，与本次内容闸门改动的文件和功能无关；本阶段专项测试全部通过。
+
 ### 修复副本闸门
 
 ```text
+validate-story: passed, errors=0
+validate-manifest: passed, errors=0
 pre_generation strict: passed, blockers=0, warnings=0
 pre_delivery report-only: passed, blockers=0, warnings=0
 generation queue: pending=0, running=0, retryable=0, failed=0, completed=0, cached=9
@@ -107,6 +120,7 @@ final review checklist: passed, page_issues=0, global_issues=0, warnings=0
 
 - Skill 设计：[2026-10-24-formal-delivery-contract-design.md](../superpowers/specs/2026-10-24-formal-delivery-contract-design.md)
 - Skill 计划：[2026-10-24-formal-delivery-contract.md](../superpowers/plans/2026-10-24-formal-delivery-contract.md)
+- 内容闸门设计：[2026-10-24-content-gate-integration-design.md](../superpowers/specs/2026-10-24-content-gate-integration-design.md)
+- 内容闸门计划：[2026-10-24-content-gate-integration.md](../superpowers/plans/2026-10-24-content-gate-integration.md)
 - 最终审核清单：`D:\宝宝绘本制作\reports\bean-sprout-v2-formal-book-20261024\review-checklist-final-executed-20261024\review-checklist.md`
 - 修复项目验收：`D:\宝宝绘本制作\reports\bean-sprout-v2-formal-book-20261023\delivery-input-repaired\books\bean-sprout-v2-formal-book\v1\review\review.json`
-

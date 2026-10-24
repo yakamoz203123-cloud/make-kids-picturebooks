@@ -83,6 +83,16 @@ python3 "$SKILL_DIR/scripts/content_gate.py" validate-story \
 
 `knowledge_claims` 只能引用白名单或明确记录的 `inference`；`uncertain`、`pending_confirmation`、`omit` 不得出现在正式儿童页。`science_visual_checks` 用来检查“文字说到的条件、数量、顺序和变化是否在画面中成立”，不能只写“科学正确”。全书还要做 storyboard-level visual consistency 检查：不可把比较条件、根芽顺序、冰水状态、洗手动作顺序等关键结构画反或画成无条件规律。
 
+正式生产项目以 `page-manifest.json` 作为页面科学证据的唯一事实来源，并在其中保存全书级 `science_visual_consistency`。可直接运行：
+
+```bash
+python3 "$SKILL_DIR/scripts/content_gate.py" validate-manifest \
+  /absolute/project/page-manifest.json \
+  /absolute/project/review/knowledge-whitelist.json
+```
+
+`project_preflight.py --mode strict` 会自动调用故事追溯和该 manifest 闸门；审核清单只整理预检结果，不重复实现内容检查，也不会把同一份证据复制到 `storyboard.json`。
+
 ## 5. 三种状态
 
 - **A — input blocked**：四文件研究包不完整或知识状态不能安全交付；停止内容生产，向用户索取实际 Research 包或修正确认。

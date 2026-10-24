@@ -26,6 +26,7 @@ from build_pure_image_delivery import (
     _source_image,
 )
 from continuity_contract import validate_continuity_invariants
+from content_gate import validate_page_manifest_science, validate_story_claims
 from generation_queue import _plan
 from project_bundle import validate_production_dependencies
 from validate_page_manifest import validate_page_manifest
@@ -291,6 +292,66 @@ def _research_check(
         missing = sorted(name for name in required if not (packet / name).is_file())
         if missing:
             blockers.append("RESEARCH_PACKET_INCOMPLETE:" + ",".join(missing))
+    return blockers, warnings, evidence
+
+
+def _content_gate_check(
+    *,
+    root: Path,
+    book_dir: Path,
+    content_dir: Path,
+    manifest: Mapping[str, Any],
+    project_data: Mapping[str, Any],
+    layout: str,
+) -> tuple[list[str], list[str], list[dict[str, Any]]]:
+    """Run declared story and page-manifest content gates without writing files."""
+
+    blockers: list[str] = []
+    warnings: list[str] = []
+    evidence: list[dict[str, Any]] = []
+    whitelist_path = _resolve_local_reference(
+        manifest.get("knowledge_whitelist_path"),
+        book_dir=book_dir,
+        content_dir=content_dir,
+        root=root,
+    )
+    trace_path = _resolve_local_reference(
+        manifest.get("story_claim_trace_path"),
+        book_dir=book_dir,
+        content_dir=content_dir,
+        root=root,
+    )
+    if not whitelist_path or not trace_path or not whitelist_path.is_file() or not trace_path.is_file():
+        return blockers, warnings, evidence
+
+    story_candidates = [content_dir / "story.md", book_dir / "story.md"]
+    story_path = next((path for path in story_candidates if path.is_file()), None)
+    if story_path is None:
+        return blockers, warnings, evidence
+    try:
+        story_text = story_path.read_text(encoding="utf-8")
+        trace = json.loads(trace_path.read_text(encoding="utf-8"))
+        whitelist = json.loads(whitelist_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        blockers.append(f"CONTENT_GATE:input:invalid:{exc}")
+        return blockers, warnings, evidence
+
+    story_report = validate_story_claims(story_text, trace, whitelist)
+    manifest_report = validate_page_manifest_science(dict(manifest), whitelist)
+    for kind, report in (("story", story_report), ("manifest", manifest_report)):
+        evidence.append(
+            {
+                "kind": "content_gate",
+                "source": kind,
+                "status": report.get("status"),
+                "error_codes": list(report.get("error_codes", [])),
+                "errors": list(report.get("errors", [])),
+            }
+        )
+        for code in report.get("error_codes", []):
+            blockers.append(f"CONTENT_GATE:{kind}:{code}")
+        for warning in report.get("warnings", []):
+            warnings.append(f"CONTENT_GATE:{kind}:{warning}")
     return blockers, warnings, evidence
 
 
@@ -640,6 +701,20 @@ def preflight_project(
     report["evidence"].extend(research_evidence)
     if not research_blocks:
         passed("research_traceability", warnings=research_warnings)
+
+    content_blocks, content_warnings, content_evidence = _content_gate_check(
+        root=root,
+        book_dir=book_dir,
+        content_dir=content_dir,
+        manifest=manifest,
+        project_data=project_data,
+        layout=layout,
+    )
+    report["blockers"].extend(content_blocks)
+    report["warnings"].extend(content_warnings)
+    report["evidence"].extend(content_evidence)
+    if content_evidence and not content_blocks:
+        passed("content_gate", checks=["story_claims", "page_manifest_science"])
 
     continuity_blocks: list[str] = []
     continuity_warnings: list[str] = []

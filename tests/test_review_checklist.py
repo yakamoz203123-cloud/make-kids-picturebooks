@@ -88,6 +88,16 @@ def test_build_review_checklist_keeps_global_issues_and_warnings_separate() -> N
     assert checklist["production_dependency_closure"]["missing"] == []
 
 
+def test_build_review_checklist_exposes_content_gate_blocker() -> None:
+    report = _report()
+    report["blockers"].append("CONTENT_GATE:manifest:missing_storyboard_science_review")
+
+    checklist = build_review_checklist(report, _page_records())
+
+    issue = next(item for item in checklist["global_issues"] if item["code"] == "CONTENT_GATE")
+    assert "missing_storyboard_science_review" in issue["detail"]
+
+
 def test_render_markdown_is_actionable_without_claiming_human_approval() -> None:
     markdown = render_review_checklist_markdown(build_review_checklist(_report(), _page_records()))
 

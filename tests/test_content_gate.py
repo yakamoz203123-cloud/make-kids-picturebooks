@@ -13,6 +13,7 @@ from content_gate import (  # noqa: E402
     build_knowledge_whitelist,
     configure_cli_encoding,
     validate_research_packet,
+    validate_page_manifest_science,
     validate_story_claims,
     validate_storyboard_science,
 )
@@ -430,6 +431,45 @@ class StoryboardScienceTests(unittest.TestCase):
 
         self.assertEqual("blocked", report["status"])
         self.assertIn("forbidden_claim_status", report["error_codes"])
+
+    def test_manifest_science_checks_pass_without_storyboard_duplication(self):
+        with tempfile.TemporaryDirectory() as td:
+            report = validate_page_manifest_science(
+                {
+                    "pages": [
+                        {
+                            "page": 1,
+                            "knowledge_claims": ["claim-fact"],
+                            "science_visual_checks": [
+                                {
+                                    "claim_id": "claim-fact",
+                                    "required_visual_evidence": "种子变大",
+                                    "status": "passed",
+                                    "evidence": "实际画面看到种子变大",
+                                }
+                            ],
+                        }
+                    ],
+                    "science_visual_consistency": {
+                        "status": "passed",
+                        "checks": ["同一颗种子按吸水、裂开、发根顺序变化"],
+                    },
+                },
+                self._whitelist(td),
+            )
+
+        self.assertEqual("passed", report["status"])
+        self.assertEqual("page-manifest", report["source"])
+
+    def test_manifest_science_requires_whole_book_review(self):
+        with tempfile.TemporaryDirectory() as td:
+            report = validate_page_manifest_science(
+                {"pages": []},
+                self._whitelist(td),
+            )
+
+        self.assertEqual("blocked", report["status"])
+        self.assertIn("missing_storyboard_science_review", report["error_codes"])
 
 
 if __name__ == "__main__":

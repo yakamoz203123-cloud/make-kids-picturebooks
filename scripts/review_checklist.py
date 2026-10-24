@@ -23,6 +23,7 @@ FIELD_ACTIONS = {
 }
 
 GLOBAL_ACTIONS = {
+    "CONTENT_GATE": "修复故事追溯或页面 manifest 科学证据后，重新运行内容闸门；不能用人工审核记录替代内容证据。",
     "FORMAL_IMAGE_SPEC_INVALID": "保留原图，另行导出或重新生成正式 1080×1440 源图，并记录新图哈希。",
     "HUMAN_REVIEW_RECORD_MISSING": "完成页面人工审核后，保存 review 记录；脚本不能代替人工批准。",
     "STYLE_APPROVAL_NOT_LOCAL": "补充项目本地样式审批证据，或明确记录可验证的全局依赖。",
