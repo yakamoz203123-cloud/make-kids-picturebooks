@@ -43,6 +43,18 @@
 2. 现有 `windmill-3-4-v1` 原项目本身仍有工程契约问题：顶层和 `content/` 同时存在重复的 `page-manifest.json`，且旧副本缺少新的 Research/科学审核声明。严格入口正确地阻断了它；本轮没有修改原项目资料。
 3. v1.3 已发布但不是全局默认，后续需要在项目模板层强制校验“style_id/style_version 与 character_asset_bundle”的兼容映射，避免项目手工组合出歧义。
 
+## 故事实测：《小风车转起来了！》
+
+本次使用 9 页、3—4 岁项目做工作流烟测，不调用图片模型，也不评价内容或图片质量。
+
+- 原项目 Research 包：`passed`。
+- 原项目 strict 预检：`blocked`，唯一阻断为 `CONTENT_GATE:input:research_references_undeclared`；`write_operations=0`、`image_model_calls=0`。
+- 临时契约完整副本：strict 预检 `passed`，9 页全部进入计划。
+- 临时副本队列初始化：通过，`production` 模式，要求用户授权。
+- 授权：通过，`max_calls=1`。
+- 第 1 页领取：通过，状态为 `running`。
+- 临时测试未改写原项目；只在副本中补齐 Research/科学审核声明并保留 `content/` 作为唯一契约目录。
+
 ## 提交
 
 - `d95f8cf fix: make asset receipts cross-platform`
