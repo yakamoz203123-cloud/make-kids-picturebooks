@@ -34,6 +34,7 @@ DEFAULT_MAX_IN_FLIGHT = 2
 DEFAULT_MAX_ATTEMPTS = 2
 MIN_IMAGE_SIDE_PX = 1024
 COORDINATION_MODE = "single-coordinator"
+WORKFLOW_RULES_VERSION = "workflow-gates-v1"
 QUEUE_LOCK_TIMEOUT_SECONDS = 5.0
 QUEUE_LOCK_POLL_SECONDS = 0.05
 QUEUE_LOCK_STALE_SECONDS = 300.0
@@ -304,7 +305,12 @@ def _file_hash(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _page_reference_assets(book_dir: Path, page: dict[str, Any]) -> list[dict[str, Any]]:
+def _page_reference_assets(
+    book_dir: Path,
+    page: dict[str, Any],
+    *,
+    content_dir: Path | None = None,
+) -> list[dict[str, Any]]:
     """Resolve optional page-local supplemental references and verify their hashes."""
     raw = page.get("character_reference_assets")
     if raw is None:
@@ -319,7 +325,7 @@ def _page_reference_assets(book_dir: Path, page: dict[str, Any]) -> list[dict[st
         path_value = record.get("path")
         if not isinstance(path_value, str) or not path_value.strip():
             raise ValueError(f"character_reference_assets[{index}] is missing path")
-        path = _resolve_book_path(book_dir, path_value)
+        path = _resolve_book_path(book_dir, path_value, content_dir=content_dir)
         if path is None or not path.is_file():
             raise ValueError(f"character reference asset does not exist: {path_value}")
         relative = Path(path_value.replace("\\", "/")).as_posix()
@@ -409,8 +415,13 @@ def _resolve_contained_path(book_dir: Path, candidate: Path) -> Path:
     return resolved
 
 
-def _resolve_book_path(book_dir: Path, relative_or_absolute: str | None) -> Path | None:
-    """Resolve a project input path and reject absolute/traversal/symlink escapes."""
+def _resolve_book_path(
+    book_dir: Path,
+    relative_or_absolute: str | None,
+    *,
+    content_dir: Path | None = None,
+) -> Path | None:
+    """Resolve a project input path across the canonical book/content roots."""
     if not relative_or_absolute:
         return None
     raw = str(relative_or_absolute)
@@ -421,8 +432,30 @@ def _resolve_book_path(book_dir: Path, relative_or_absolute: str | None) -> Path
         raise ValueError(f"input path must be relative to book directory: {relative_or_absolute}")
     if ".." in posix_candidate.parts or ".." in windows_candidate.parts:
         raise ValueError(f"input path must not contain '..': {relative_or_absolute}")
-    candidate = Path(normalized)
-    return _resolve_contained_path(book_dir, candidate)
+    book_root = book_dir.resolve()
+    roots = []
+    if content_dir is not None:
+        content_root = Path(content_dir).resolve()
+        try:
+            content_root.relative_to(book_root)
+        except ValueError as exc:
+            raise ValueError(f"content directory must stay inside book directory: {content_dir}") from exc
+        roots.append(content_root)
+    roots.append(book_root)
+    fallback: Path | None = None
+    for root in roots:
+        raw_candidate = root / normalized
+        resolved = raw_candidate.resolve()
+        if fallback is None:
+            fallback = resolved
+        if not raw_candidate.exists() and not raw_candidate.is_symlink():
+            continue
+        try:
+            resolved.relative_to(book_root)
+        except ValueError as exc:
+            raise ValueError(f"path must stay inside book directory: {relative_or_absolute}") from exc
+        return resolved
+    return fallback
 
 
 def _resolve_output_path(book_dir: Path, relative_or_absolute: str | None) -> Path | None:
@@ -453,6 +486,8 @@ def _story_dependency_segment(
     book_dir: Path,
     story_path: Path,
     dependency: Any,
+    *,
+    content_dir: Path | None = None,
 ) -> str | None:
     """Resolve a declared page dependency or return None for conservative fallback.
 
@@ -463,7 +498,7 @@ def _story_dependency_segment(
     source_text = story_text
     descriptor = dependency
     if isinstance(dependency, dict) and dependency.get("path"):
-        source = _resolve_book_path(book_dir, str(dependency["path"]))
+        source = _resolve_book_path(book_dir, str(dependency["path"]), content_dir=content_dir)
         if source is None or not source.is_file():
             return None
         try:
@@ -524,7 +559,16 @@ def _story_dependency_segment(
             return "".join(source_lines[start_index:end_index])
 
     if isinstance(descriptor, list) and descriptor:
-        segments = [_story_dependency_segment(story_text, book_dir, story_path, item) for item in descriptor]
+        segments = [
+            _story_dependency_segment(
+                story_text,
+                book_dir,
+                story_path,
+                item,
+                content_dir=content_dir,
+            )
+            for item in descriptor
+        ]
         if all(segment is not None for segment in segments):
             return "\n".join(segment for segment in segments if segment is not None)
     return None
@@ -536,6 +580,8 @@ def _story_dependency_fingerprint(
     book_dir: Path,
     dependencies: list[Any],
     whole_story_sha256: str,
+    *,
+    content_dir: Path | None = None,
 ) -> tuple[str, str]:
     present = [dependency for dependency in dependencies if dependency is not None]
     if not present:
@@ -543,7 +589,13 @@ def _story_dependency_fingerprint(
 
     parts = []
     for dependency in present:
-        segment = _story_dependency_segment(story_text, book_dir, story_path, dependency)
+        segment = _story_dependency_segment(
+            story_text,
+            book_dir,
+            story_path,
+            dependency,
+            content_dir=content_dir,
+        )
         if isinstance(dependency, str) and dependency.strip() in {"story.md", "whole-story"}:
             return "whole-story", whole_story_sha256
         if isinstance(dependency, dict) and dependency.get("mode") in {"book", "whole-story"}:
@@ -686,22 +738,22 @@ def _plan(book_dir: Path) -> dict[str, Any]:
         prompt_path_value = page.get("current_prompt_path") or page.get("prompt_path")
         if not isinstance(prompt_path_value, str) or not prompt_path_value.strip():
             raise ValueError(f"page {number} is missing its completed prompt path")
-        prompt_path = _resolve_book_path(book_dir, prompt_path_value)
+        prompt_path = _resolve_book_path(book_dir, prompt_path_value, content_dir=content_dir)
         if prompt_path is None or not prompt_path.is_file():
             raise ValueError(f"page {number} prompt does not exist: {prompt_path_value}")
 
         character_path_value = page.get("character_reference_path")
         if not isinstance(character_path_value, str) or not character_path_value.strip():
             raise ValueError(f"page {number} is missing character_reference_path")
-        character_path = _resolve_book_path(book_dir, character_path_value)
+        character_path = _resolve_book_path(book_dir, character_path_value, content_dir=content_dir)
         if character_path is None or not character_path.is_file():
             raise ValueError(f"page {number} character reference does not exist: {character_path_value}")
 
         production_path_value = page.get("production_reference_path") or character_path_value
-        production_path = _resolve_book_path(book_dir, production_path_value)
+        production_path = _resolve_book_path(book_dir, production_path_value, content_dir=content_dir)
         if production_path is None or not production_path.is_file():
             raise ValueError(f"page {number} production reference does not exist: {production_path_value}")
-        reference_assets = _page_reference_assets(book_dir, page)
+        reference_assets = _page_reference_assets(book_dir, page, content_dir=content_dir)
         page_task = assemble_page_task(
             page,
             storyboard_page=storyboard_by_page[number],
@@ -727,6 +779,7 @@ def _plan(book_dir: Path) -> dict[str, Any]:
             book_dir,
             story_dependency_specs,
             story_sha256,
+            content_dir=content_dir,
         )
         declared_aspect_ratio = _declared_aspect_ratio(
             page,
@@ -905,12 +958,15 @@ def _append_event(state: dict[str, Any], event: str, page: int | None = None, **
 
 def _page_event_fields(job: dict[str, Any]) -> dict[str, Any]:
     """Return stable page metadata shared by queue events."""
-    return {
+    fields = {
         "page_id": job.get("page_id") or f"PAGE-{int(job['page']):02d}",
         "page_version": job.get("page_version"),
         "revision": int(job.get("revision", 1)),
         "asset_dependency_fingerprint": job.get("asset_dependency_fingerprint"),
     }
+    if job.get("generation_authorization_id") is not None:
+        fields["generation_authorization_id"] = job["generation_authorization_id"]
+    return fields
 
 
 def _request_lifecycle(state: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1100,6 +1156,87 @@ def _book_path_from_queue(state: dict[str, Any], value: str | Path) -> Path:
     return Path(state["book_dir"]) / value if not Path(value).is_absolute() else Path(value)
 
 
+def _find_project_root(book_dir: Path) -> Path | None:
+    for candidate in (book_dir, *book_dir.parents):
+        if (candidate / "project.json").is_file():
+            return candidate
+    return None
+
+
+def _pre_generation_gate(book_dir: Path, planned: dict[str, Any]) -> dict[str, Any]:
+    """Return a bound strict gate receipt for production projects.
+
+    Low-level standalone queue fixtures do not have a project contract and
+    retain their historical behavior. A real project always crosses the
+    strict preflight boundary before a queue can be created.
+    """
+    project_root = _find_project_root(book_dir)
+    if project_root is None:
+        return {
+            "schema_version": 1,
+            "status": "not_applicable",
+            "mode": "standalone-legacy",
+            "phase": "pre_generation",
+            "workflow_rules_version": WORKFLOW_RULES_VERSION,
+            "plan_fingerprint": planned["plan_fingerprint"],
+            "created_at": _now(),
+        }
+
+    from project_preflight import preflight_project
+
+    report = preflight_project(
+        project_root,
+        book_dir.parent.name,
+        version=book_dir.name,
+        phase="pre_generation",
+        mode="strict",
+    )
+    if report.get("status") != "passed":
+        blockers = report.get("blockers") if isinstance(report.get("blockers"), list) else []
+        detail = ";".join(str(item) for item in blockers[:12]) or "unknown blocker"
+        raise RuntimeError(f"PRE_GENERATION_GATE_BLOCKED:{detail}")
+    if report.get("plan_fingerprint") != planned.get("plan_fingerprint"):
+        raise RuntimeError("PRE_GENERATION_PLAN_MISMATCH:strict preflight and queue plan differ")
+    return {
+        "schema_version": 1,
+        "status": "passed",
+        "mode": "production",
+        "phase": "pre_generation",
+        "project_root": report.get("project_root"),
+        "book_key": report.get("book_key"),
+        "version": report.get("version"),
+        "plan_fingerprint": report.get("plan_fingerprint"),
+        "workflow_rules_version": report.get("workflow_rules_version", WORKFLOW_RULES_VERSION),
+        "created_at": _now(),
+    }
+
+
+def _assert_production_gate_receipt(state: dict[str, Any]) -> None:
+    """Prevent pre-gate legacy queues from reaching an irreversible claim."""
+    book_dir = Path(state["book_dir"]).resolve()
+    project_root = _find_project_root(book_dir)
+    if project_root is None:
+        return
+    gate = state.get("workflow_gate")
+    expected = {
+        "schema_version": 1,
+        "status": "passed",
+        "mode": "production",
+        "phase": "pre_generation",
+        "project_root": str(project_root),
+        "book_key": book_dir.parent.name,
+        "version": book_dir.name,
+        "plan_fingerprint": state.get("plan_fingerprint"),
+        "workflow_rules_version": WORKFLOW_RULES_VERSION,
+    }
+    if (
+        not isinstance(gate, dict)
+        or any(gate.get(key) != value for key, value in expected.items())
+        or state.get("preflight_receipt") != gate
+    ):
+        raise RuntimeError("PRE_GENERATION_GATE_REQUIRED:queue has no valid strict preflight receipt")
+
+
 def init_queue(
     book_dir: str | Path,
     queue_path: str | Path,
@@ -1114,6 +1251,8 @@ def init_queue(
     book_dir = Path(book_dir).resolve()
     queue_path = Path(queue_path).resolve()
     planned = _plan(book_dir)
+    workflow_gate = _pre_generation_gate(book_dir, planned)
+    requires_user_authorization = workflow_gate.get("mode") == "production"
     with _queue_mutation_lock(queue_path):
         existing: dict[str, Any] | None = None
         if queue_path.exists():
@@ -1184,6 +1323,12 @@ def init_queue(
                 fresh["last_error"] = "request fingerprint changed; previous output is not reusable"
             jobs.append(fresh)
 
+        plan_changed = bool(existing and existing.get("plan_fingerprint") != planned["plan_fingerprint"])
+        generation_authorizations = (
+            []
+            if plan_changed
+            else copy.deepcopy(existing.get("generation_authorizations", [])) if existing else []
+        )
         state = {
             "schema_version": SCHEMA_VERSION,
             "coordination_mode": COORDINATION_MODE,
@@ -1194,15 +1339,19 @@ def init_queue(
             "page_count": planned["page_count"],
             "plan_fingerprint": planned["plan_fingerprint"],
             "story_sha256": planned["story_sha256"],
-        "character_reference_path": planned["character_reference_path"],
-        "character_reference_paths": planned["character_reference_paths"],
+            "character_reference_path": planned["character_reference_path"],
+            "character_reference_paths": planned["character_reference_paths"],
             "character_version": planned["character_version"],
+            "workflow_gate": workflow_gate,
+            "preflight_receipt": workflow_gate if requires_user_authorization else None,
+            "requires_user_authorization": requires_user_authorization,
             "max_in_flight": max_in_flight,
             "max_attempts": max_attempts,
             "jobs": jobs,
             "events": copy.deepcopy(existing.get("events", [])) if existing else [],
             "request_lifecycle": copy.deepcopy(existing.get("request_lifecycle", [])) if existing else [],
             "recovery_authorizations": copy.deepcopy(existing.get("recovery_authorizations", [])) if existing else [],
+            "generation_authorizations": generation_authorizations,
             "created_at": existing.get("created_at") if existing else _now(),
             "updated_at": _now(),
         }
@@ -1223,12 +1372,75 @@ def init_queue(
         return state
 
 
+def authorize_generation(
+    queue_path: str | Path,
+    *,
+    approval: str,
+    max_calls: int = 1,
+) -> dict[str, Any]:
+    """Record one explicit user authorization for ordinary generation calls."""
+    approval = str(approval).strip()
+    if not approval:
+        raise ValueError("generation approval must be non-empty")
+    if type(max_calls) is not int or max_calls < 1:
+        raise ValueError("generation max_calls must be a positive integer")
+    queue_path = Path(queue_path).resolve()
+    with _queue_mutation_lock(queue_path):
+        state = _load_queue(queue_path)
+        authorization = {
+            "authorization_id": f"generation-auth-{uuid.uuid4().hex}",
+            "approval": approval,
+            "approved_at": _now(),
+            "max_calls": max_calls,
+            "used_calls": 0,
+        }
+        state.setdefault("generation_authorizations", []).append(authorization)
+        _append_event(state, "generation_authorized", **authorization)
+        _save_queue(queue_path, state)
+        return copy.deepcopy(authorization)
+
+
+def _generation_authorization(
+    state: dict[str, Any],
+    authorization_id: str | None,
+    calls: int,
+) -> dict[str, Any] | None:
+    if not state.get("requires_user_authorization", False):
+        return None
+    if not isinstance(authorization_id, str) or not authorization_id.strip():
+        raise PermissionError("generation authorization is required")
+    authorizations = state.get("generation_authorizations", [])
+    authorization = next(
+        (item for item in authorizations if item.get("authorization_id") == authorization_id),
+        None,
+    )
+    if authorization is None:
+        raise PermissionError("generation authorization is invalid")
+    available = int(authorization.get("max_calls", 0)) - int(authorization.get("used_calls", 0))
+    if available < calls:
+        raise PermissionError("generation authorization has already been used or has insufficient calls")
+    return authorization
+
+
+def _consume_generation_authorization(
+    state: dict[str, Any],
+    authorization_id: str | None,
+    calls: int,
+) -> None:
+    authorization = _generation_authorization(state, authorization_id, calls)
+    if authorization is None:
+        return
+    authorization["used_calls"] = int(authorization.get("used_calls", 0)) + calls
+    authorization["used_at"] = _now()
+
+
 def _claim_job_state(
     state: dict[str, Any],
     job: dict[str, Any],
     *,
     recovery_of_request_id: str | None = None,
     recovery_approval: str | None = None,
+    generation_authorization_id: str | None = None,
     emit_claim_event: bool = True,
 ) -> dict[str, Any]:
     if job["status"] in DONE_STATUSES:
@@ -1252,6 +1464,8 @@ def _claim_job_state(
     if recovery_of_request_id is not None:
         job["recovery_of_request_id"] = recovery_of_request_id
         job["recovery_approval"] = recovery_approval
+    if generation_authorization_id is not None:
+        job["generation_authorization_id"] = generation_authorization_id
     record = _append_request_record(
         state,
         job,
@@ -1270,20 +1484,37 @@ def _claim_job_state(
     return copy.deepcopy(job)
 
 
-def claim_job(queue_path: str | Path, page: int) -> dict[str, Any]:
+def claim_job(
+    queue_path: str | Path,
+    page: int,
+    *,
+    authorization_id: str | None = None,
+) -> dict[str, Any]:
     queue_path = Path(queue_path).resolve()
     with _queue_mutation_lock(queue_path):
         state = _load_queue(queue_path)
+        _assert_production_gate_receipt(state)
         job = _job(state, page)
         running = sum(1 for item in state["jobs"] if item["status"] in ACTIVE_STATUSES)
         if running >= int(state["max_in_flight"]):
             raise RuntimeError("max_in_flight reached; complete or fail a running page first")
-        result = _claim_job_state(state, job)
+        _generation_authorization(state, authorization_id, 1)
+        result = _claim_job_state(
+            state,
+            job,
+            generation_authorization_id=authorization_id,
+        )
+        _consume_generation_authorization(state, authorization_id, 1)
         _save_queue(queue_path, state)
         return result
 
 
-def claim_batch(queue_path: str | Path, pages: list[int]) -> list[dict[str, Any]]:
+def claim_batch(
+    queue_path: str | Path,
+    pages: list[int],
+    *,
+    authorization_id: str | None = None,
+) -> list[dict[str, Any]]:
     """Atomically claim a bounded page group for one host coordinator.
 
     The batch limit controls queue bookkeeping only; it does not claim that the
@@ -1292,6 +1523,7 @@ def claim_batch(queue_path: str | Path, pages: list[int]) -> list[dict[str, Any]
     queue_path = Path(queue_path).resolve()
     with _queue_mutation_lock(queue_path):
         state = _load_queue(queue_path)
+        _assert_production_gate_receipt(state)
         normalized = [int(page) for page in pages]
         if not normalized or len(set(normalized)) != len(normalized):
             raise ValueError("claim batch requires one or more distinct page numbers")
@@ -1308,12 +1540,23 @@ def claim_batch(queue_path: str | Path, pages: list[int]) -> list[dict[str, Any]
         for job in jobs:
             if _current_request(state, job) and _current_request(state, job).get("terminal_state") in {"timed_out", "pending_unknown"}:
                 raise RuntimeError(f"page {job['page']} has an unresolved unknown request; recovery authorization is required")
-        claimed_jobs = [_claim_job_state(state, job, emit_claim_event=False) for job in jobs]
+        _generation_authorization(state, authorization_id, len(jobs))
+        claimed_jobs = [
+            _claim_job_state(
+                state,
+                job,
+                generation_authorization_id=authorization_id,
+                emit_claim_event=False,
+            )
+            for job in jobs
+        ]
+        _consume_generation_authorization(state, authorization_id, len(jobs))
         _append_event(
             state,
             "batch_claimed",
             pages=normalized,
             attempts=[job["attempts"] for job in claimed_jobs],
+            generation_authorization_id=authorization_id,
             page_records=[
                 {**_page_event_fields(job), "attempt": job["attempts"], "request_id": job.get("current_request_id")}
                 for job in claimed_jobs
@@ -1775,9 +2018,15 @@ def _parser() -> argparse.ArgumentParser:
     claim = subparsers.add_parser("claim")
     claim.add_argument("queue_json", type=Path)
     claim.add_argument("--page", type=int, required=True)
+    claim.add_argument("--authorization-id")
     batch = subparsers.add_parser("claim-batch", help="atomically claim a bounded group of pages")
     batch.add_argument("queue_json", type=Path)
     batch.add_argument("--pages", type=int, nargs="+", required=True)
+    batch.add_argument("--authorization-id")
+    generation_authorize = subparsers.add_parser("authorize-generation")
+    generation_authorize.add_argument("queue_json", type=Path)
+    generation_authorize.add_argument("--approval", required=True)
+    generation_authorize.add_argument("--max-calls", type=int, default=1)
     complete = subparsers.add_parser("complete")
     complete.add_argument("queue_json", type=Path)
     complete.add_argument("--page", type=int, required=True)
@@ -1827,9 +2076,11 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "status":
             result = status(args.queue_json)
         elif args.command == "claim":
-            result = claim_job(args.queue_json, args.page)
+            result = claim_job(args.queue_json, args.page, authorization_id=args.authorization_id)
         elif args.command == "claim-batch":
-            result = claim_batch(args.queue_json, args.pages)
+            result = claim_batch(args.queue_json, args.pages, authorization_id=args.authorization_id)
+        elif args.command == "authorize-generation":
+            result = authorize_generation(args.queue_json, approval=args.approval, max_calls=args.max_calls)
         elif args.command == "complete":
             result = complete_job(args.queue_json, args.page, args.output, elapsed_ms=args.elapsed_ms)
         elif args.command == "fail":

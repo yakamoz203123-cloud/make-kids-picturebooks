@@ -79,11 +79,12 @@ description: Use when the user provides an adult knowledge book or chapter, or o
 
 ## 4. 门禁、生产和审核
 
-规划、资产解析和 `layout_design` 完成后，在第一张正式图片提交前运行一次 `project_preflight.py ... --phase pre_generation --mode strict`。预检是只读的，不创建队列、不写项目、不调用图片模型；`generation_queue.py init` 不会替代 Research、教育目标、内容、strict-assets 或比例检查，只验证结构输入。
+规划、资产解析和 `layout_design` 完成后，在第一张正式图片提交前运行一次 `project_preflight.py ... --phase pre_generation --mode strict`。预检是只读的，不调用图片模型；正式项目的 `generation_queue.py init` 会自动复验同一 strict 门禁并保存 `preflight_receipt`，门禁不通过时不创建或改写队列。没有 `project.json` 的底层独立队列才使用历史兼容模式。队列不会替代 Research、教育目标、内容、strict-assets 或比例检查，只验证结构输入并绑定门禁结果。
 
-逐页只做一页一次轻量检查、一次授权调用、候选隔离、尺寸/路径/SHA-256 校验和页面审核。超时或 `pending_unknown` 立即停止；未经新授权不得自动恢复、重试或领取下一页。
+逐页只做一页一次轻量检查、一次授权调用、候选隔离、尺寸/路径/SHA-256 校验和页面审核。生产队列必须先记录有限次数的用户生成授权，`claim` 消费授权 ID；超时或 `pending_unknown` 立即停止，未经新授权不得自动恢复、重试或领取下一页。
 
 页面审核保留 `layout_review`、`text-image state matching` 和 `adjacent-page pair`。最终分别记录图片工具返回成功、技术规格通过、人工视觉审核通过和最终发布批准。四类证据互不替代：`engineering evidence`、`content evidence`、`visual evidence`、`real-reading evidence`。
+`build_pure_image_delivery.py` 只产生技术交付包，`release_status` 保持 `human_review_pending`；通过 `pre_delivery/strict` 和项目最终审核后，再运行 `release_pure_image_delivery.py` 写入 `release-receipt.json`。技术构建成功不等于正式发布。
 
 ## 5. 按需分支和历史兼容分支
 

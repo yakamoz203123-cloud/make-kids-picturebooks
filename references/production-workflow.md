@@ -39,7 +39,7 @@
 - `production-ready`：可做 strict 预检、串行逐页生图、单页返工和确定性交付。每个页面声明的 `current_prompt_path`/`prompt_path`、`character_reference_path`、`production_reference_path` 都必须存在并位于当前书籍目录内；研究包、knowledge whitelist 和 story-claim trace 也必须能从项目契约解析。
 - `delivery-only`：只用于已有图片的纯图交付和哈希校验，不承诺可续做，不得初始化生产队列。
 
-没有显式 profile 的历史项目会由预检根据依赖完整性推断，并在回执中标记 `legacy-undeclared` 或 `production-ready`。新项目不要省略 profile。
+没有显式 profile 的历史项目会由预检根据依赖完整性推断，并在回执中标记 `legacy-undeclared` 或 `production-ready`。新项目不要省略 profile；显式但未知的 profile 会直接阻断，不会被静默升级为 `production-ready`。
 
 `project_preflight.py` 的 `production_dependency_closure` 是只读门禁：它不复制文件、不创建队列、不调用图片模型，只报告 `missing`、`outside_book`、`warnings` 和实际解析证据。缺少生产依赖时，先修复项目包或明确降级为 `delivery-only`，不能靠跳过 strict 继续生图。
 
@@ -68,6 +68,8 @@ python3 "$SKILL_DIR/scripts/project_preflight.py" \
 
 strict 回执至少保留 `status`、`phase`、`mode`、`blockers`、`warnings`、`write_operations`、`image_model_calls`、页数、`page_task_assembly.plan_fingerprint`、内容闸门 evidence，以及研究/claim、批准资产/画风、引用文件的 SHA-256。
 
+生产项目的 `generation_queue.py init` 会自动再次执行同一项 `pre_generation/strict` 检查，并把项目、book、version、`plan_fingerprint` 和规则版本写入 `preflight_receipt`；strict 不通过时不创建或改写队列。没有 `project.json` 的底层独立队列夹具才使用 `standalone-legacy` 兼容模式。
+
 正式交付的页面审核问题较多时，可以生成一个只读汇总清单：
 
 ```bash
@@ -76,7 +78,7 @@ python3 "$SKILL_DIR/scripts/review_checklist.py" \
   --output-dir /absolute/reports/review-checklist-v1
 ```
 
-它复用 `project_preflight.py --phase pre_delivery --mode report-only` 的结果，把页面问题按页聚合，把图片规格、人工审核和样式审批列为全局问题，并同时生成 `review-checklist.json` 与 `review-checklist.md`。这是人工工作台，不是新的生产阶段；它不会自动把 `pending` 改为 `passed`，也不会覆盖已有输出。
+它复用 `project_preflight.py --phase pre_delivery --mode report-only` 的结果，把页面问题按页聚合，把图片规格、人工审核和样式审批列为全局问题，并同时生成 `review-checklist.json` 与 `review-checklist.md`。这是人工工作台，不是新的生产阶段；它不会自动把 `pending` 改为 `passed`，也不会覆盖已有输出。机器预检为 `blocked` 时命令退出码为 `2`，但清单仍只读，不代替人工批准。
 
 ## 3. 串行逐页生产
 
@@ -90,6 +92,16 @@ python3 "$SKILL_DIR/scripts/generation_queue.py" init \
 ```
 
 默认 `max_in_flight=1`。队列仍保留 2—3 的兼容配置和 `claim-batch` 入口，但它们只是本地领取/记账能力，不是图片模型并发许可。队列只负责缓存、失败记录、断点续跑和 `reset-page`，不调用图像服务，不自动生成多套备选。
+
+生产队列初始化后，先记录一次有限次数的用户授权，再领取页面：
+
+```bash
+python3 "$SKILL_DIR/scripts/generation_queue.py" authorize-generation \
+  /absolute/project/books/b01/v1/review/production-queue.json \
+  --approval "用户批准本批次逐页生成" --max-calls 1
+```
+
+随后 `claim`/`claim-batch` 必须带对应 `--authorization-id`；授权次数用尽后必须重新获得授权。恢复未知请求仍使用独立的 `authorize-recovery`。
 
 每页执行：
 
@@ -105,6 +117,17 @@ python3 "$SKILL_DIR/scripts/generation_queue.py" init \
 ```
 
 队列的 `cached` 只表示当前正式画布、比例、可解码性和请求 fingerprint 均满足缓存条件，不表示人工视觉审核已经通过；最终仍需 `review.json` 和逐页视觉证据。
+
+`build_pure_image_delivery.py` 生成的是技术包，`delivery-validation.json.release_status` 保持 `human_review_pending`。完成审核后再运行：
+
+```bash
+python3 "$SKILL_DIR/scripts/release_pure_image_delivery.py" \
+  /absolute/project b01 \
+  /absolute/project/books/b01/v1/delivery/pure-image-delivery-v1 \
+  --version v1
+```
+
+只有 `pre_delivery/strict` 和项目 `review.json` 最终批准同时通过，才会原子写入 `release-receipt.json`；技术构建成功不等于正式发布。
 
 先完成 `layout_design` 再调用图像生成器；稳定基础提示词只保留画风、角色不变特征、比例、全局禁项和文字安全区，每页只追加场景动作、道具、知识证据及前后页状态。正式参考图使用 `production_reference_path`。每页一次生成；历史“两页一批”不代表并行许可。
 

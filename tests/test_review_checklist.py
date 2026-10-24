@@ -14,6 +14,7 @@ from review_checklist import (  # noqa: E402
     build_review_checklist,
     render_review_checklist_markdown,
     ensure_output_outside_project,
+    main,
     write_review_checklist,
 )
 
@@ -125,3 +126,10 @@ def test_output_directory_must_be_outside_project_root(tmp_path: Path) -> None:
     project_root = tmp_path / "project"
     with pytest.raises(ValueError, match="outside project root"):
         ensure_output_outside_project(project_root, project_root / "reports")
+
+
+def test_blocked_review_checklist_cli_returns_nonzero(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("review_checklist.preflight_project", lambda *args, **kwargs: _report())
+    output_dir = tmp_path / "review-checklist"
+
+    assert main(["ignored-project", "b01", "--version", "v1", "--output-dir", str(output_dir)]) == 2

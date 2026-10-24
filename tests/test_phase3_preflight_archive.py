@@ -14,6 +14,7 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 try:
     from incremental_archive import ArchiveError, build_incremental_archive
     from build_pure_image_delivery import build_delivery
+    from generation_queue import claim_job, init_queue
     from project_preflight import preflight_project
 finally:
     sys.path.remove(str(SCRIPTS_DIR))
@@ -164,6 +165,77 @@ def test_pre_generation_reports_complete_production_dependency_closure(tmp_path:
     assert closure["profile"] == "production-ready"
     assert closure["missing"] == []
     assert closure["outside_book"] == []
+
+
+def test_queue_init_requires_strict_preflight_for_production_projects(tmp_path: Path) -> None:
+    root = _fixture(tmp_path, with_images=False)
+    book_dir = root / "books" / "b01" / "v1"
+    (book_dir / "prompts").mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(book_dir / "content" / "prompts" / "page-01.md", book_dir / "prompts" / "page-01.md")
+    reference = book_dir / "content" / "characters" / "core-v1.3" / "reference" / "ref.png"
+    reference_target = book_dir / "characters" / "core-v1.3" / "reference" / "ref.png"
+    reference_target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(reference, reference_target)
+    manifest_path = root / "books" / "b01" / "v1" / "content" / "page-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest.pop("science_visual_consistency")
+    _write_json(manifest_path, manifest)
+    queue = root / "books" / "b01" / "v1" / "review" / "production-queue.json"
+
+    with pytest.raises(RuntimeError, match="PRE_GENERATION_GATE_BLOCKED"):
+        init_queue(root / "books" / "b01" / "v1", queue)
+    assert not queue.exists()
+
+
+def test_queue_init_records_passed_strict_preflight_receipt(tmp_path: Path) -> None:
+    root = _fixture(tmp_path, with_images=False)
+    queue = root / "books" / "b01" / "v1" / "review" / "production-queue.json"
+
+    state = init_queue(root / "books" / "b01" / "v1", queue)
+
+    assert state["workflow_gate"]["mode"] == "production"
+    assert state["preflight_receipt"]["status"] == "passed"
+    assert state["preflight_receipt"]["plan_fingerprint"] == state["plan_fingerprint"]
+    assert state["requires_user_authorization"] is True
+
+
+def test_old_production_queue_without_gate_receipt_cannot_claim(tmp_path: Path) -> None:
+    root = _fixture(tmp_path, with_images=False)
+    queue = root / "books" / "b01" / "v1" / "review" / "production-queue.json"
+    init_queue(root / "books" / "b01" / "v1", queue)
+    state = json.loads(queue.read_text(encoding="utf-8"))
+    state.pop("workflow_gate", None)
+    state.pop("preflight_receipt", None)
+    state.pop("requires_user_authorization", None)
+    queue.write_text(json.dumps(state), encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="PRE_GENERATION_GATE_REQUIRED"):
+        claim_job(queue, 1)
+
+
+def test_tampered_preflight_receipt_cannot_claim(tmp_path: Path) -> None:
+    root = _fixture(tmp_path, with_images=False)
+    queue = root / "books" / "b01" / "v1" / "review" / "production-queue.json"
+    init_queue(root / "books" / "b01" / "v1", queue)
+    state = json.loads(queue.read_text(encoding="utf-8"))
+    state["workflow_gate"]["plan_fingerprint"] = "stale-plan"
+    queue.write_text(json.dumps(state), encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="PRE_GENERATION_GATE_REQUIRED"):
+        claim_job(queue, 1)
+
+
+def test_explicit_unknown_profile_blocks_pre_generation(tmp_path: Path) -> None:
+    root = _fixture(tmp_path, with_images=False)
+    project_path = root / "project.json"
+    project = json.loads(project_path.read_text(encoding="utf-8"))
+    project["project_profile"] = "unexpected-profile"
+    _write_json(project_path, project)
+
+    result = preflight_project(root, "b01", version="v1", phase="pre_generation", mode="strict")
+
+    assert result["status"] == "blocked"
+    assert "PROJECT_PROFILE_UNKNOWN:unexpected-profile" in result["blockers"]
 
 
 def test_pre_generation_blocks_missing_manifest_content_gate(tmp_path: Path) -> None:

@@ -33,6 +33,7 @@ from validate_page_manifest import validate_page_manifest
 
 
 SCHEMA_VERSION = 1
+WORKFLOW_RULES_VERSION = "workflow-gates-v1"
 MODES = {"report-only", "strict"}
 PHASES = {"pre_generation", "pre_delivery"}
 AGES = {"3-4", "5-7", "8-10", "5-6"}
@@ -405,7 +406,7 @@ def _review_status_check(book_dir: Path, pages: Mapping[int, Mapping[str, Any]])
     evidence: list[dict[str, Any]] = []
     review_path = book_dir / "review" / "review.json"
     if not review_path.is_file():
-        warnings.append("HUMAN_REVIEW_RECORD_MISSING")
+        blockers.append("HUMAN_REVIEW_RECORD_MISSING")
         return blockers, warnings, evidence
     try:
         review = _read_json(review_path)
@@ -418,7 +419,7 @@ def _review_status_check(book_dir: Path, pages: Mapping[int, Mapping[str, Any]])
         if row and str(row.get("status", "")).lower() in {"failed", "generation_failed_timeout", "not_reviewable"}:
             blockers.append(f"PAGE_REVIEW_NOT_COMPLETE:{number}")
     if review.get("user_final_approval") not in {True, "approved", "approved_for_formal_use"}:
-        warnings.append("HUMAN_FINAL_APPROVAL_NOT_ASSERTED")
+        blockers.append("HUMAN_FINAL_APPROVAL_NOT_ASSERTED")
     evidence.append({"kind": "review", "path": str(review_path), "status": review.get("overall_status", "unknown")})
     return blockers, warnings, evidence
 
@@ -504,7 +505,11 @@ def _delivery_fingerprint(root: Path, book_dir: Path, contract: Any, records: li
                 "input_hashes": contract.input_hashes,
             },
             "pages": [
-                {"page": item["page"], "source_sha256": item["sha256"], "source_size": item["size"]}
+                {
+                    "page": item["page"],
+                    "source_sha256": item["sha256"],
+                    "source_size": item["size"],
+                }
                 for item in records
             ],
         }
@@ -538,6 +543,8 @@ def preflight_project(
         "business_book_id": None,
         "age_band": None,
         "page_count": None,
+        "plan_fingerprint": None,
+        "workflow_rules_version": WORKFLOW_RULES_VERSION,
         "passed": [],
         "warnings": [],
         "blockers": [],
@@ -689,6 +696,9 @@ def preflight_project(
             report["blockers"].append(f"PRODUCTION_DEPENDENCY_OUTSIDE_BOOK:scope={item['scope']}:field={item['field']}")
         else:
             report["blockers"].append(f"PRODUCTION_DEPENDENCY_OUTSIDE_BOOK:page={item['page']}:field={item['field']}")
+    for warning in dependency_closure["warnings"]:
+        if warning.startswith("PROJECT_PROFILE_UNKNOWN:"):
+            report["blockers"].append(warning)
     if dependency_closure["profile"] == "delivery-only" and phase == "pre_generation":
         report["blockers"].append("PROJECT_PROFILE_NOT_PRODUCTION_READY")
     if dependency_closure["status"] == "passed" and dependency_closure["profile"] != "delivery-only":
@@ -763,6 +773,7 @@ def preflight_project(
         report["blockers"].append(f"TASK_ASSEMBLY:{exc}")
     else:
         passed("page_task_assembly", page_count=plan.get("page_count"), plan_fingerprint=plan.get("plan_fingerprint"))
+        report["plan_fingerprint"] = plan.get("plan_fingerprint")
         report["evidence"].append({"kind": "plan", "page_count": plan.get("page_count"), "plan_fingerprint": plan.get("plan_fingerprint")})
 
     if phase == "pre_delivery":

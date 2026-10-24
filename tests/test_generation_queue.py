@@ -137,10 +137,39 @@ class GenerationQueueTests(unittest.TestCase):
         self.assertEqual(len({job["output_path"] for job in state["jobs"]}), 3)
         self.assertTrue(all(job["request_fingerprint"] for job in state["jobs"]))
 
+    def test_production_queue_requires_explicit_generation_authorization(self):
+        self._init()
+        state = json.loads(self.queue.read_text(encoding="utf-8"))
+        state["requires_user_authorization"] = True
+        state["workflow_gate"] = {"mode": "production"}
+        self.queue.write_text(json.dumps(state), encoding="utf-8")
+
+        with self.assertRaisesRegex(PermissionError, "generation authorization"):
+            self.module.claim_job(self.queue, 1)
+
+        authorization = self.module.authorize_generation(
+            self.queue,
+            approval="user-approved-batch",
+            max_calls=1,
+        )
+        claimed = self.module.claim_job(
+            self.queue,
+            1,
+            authorization_id=authorization["authorization_id"],
+        )
+        self.assertEqual(claimed["generation_authorization_id"], authorization["authorization_id"])
+
+        with self.assertRaisesRegex(PermissionError, "already been used|no unused"):
+            self.module.claim_job(
+                self.queue,
+                2,
+                authorization_id=authorization["authorization_id"],
+            )
+
     def test_init_accepts_content_layout_and_keeps_book_relative_inputs(self):
         content = self.book / "content"
         content.mkdir()
-        for name in ("story.md", "page-manifest.json", "storyboard.json", "layout.json"):
+        for name in ("story.md", "page-manifest.json", "storyboard.json", "layout.json", "prompts", "characters"):
             shutil.move(str(self.book / name), str(content / name))
 
         state = self._init()

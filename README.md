@@ -25,7 +25,9 @@ PDF、打印、社媒渲染、历史迁移、发布打包和完整性能统计�
 - `production-ready`：包含故事、分镜、页面清单、prompt、角色/画风批准引用、研究追溯和页面依赖，可运行 strict 预检、串行队列和逐页返工。
 - `delivery-only`：只保证已有图片、正文、顺序和交付哈希，可用于 `pure-images` 交付，不得当作可续做的生产项目。
 
-默认新项目使用 `production-ready`。`project_preflight.py --phase pre_generation --mode strict` 会检查页面依赖闭包；缺少 prompt、角色参考或生产参考时会明确阻断，不再只依赖页面清单存在。
+默认新项目使用 `production-ready`。`project_preflight.py --phase pre_generation --mode strict` 会检查页面依赖闭包；缺少 prompt、角色参考或生产参考时会明确阻断，不再只依赖页面清单存在。显式未知的 `project_profile` 也会阻断，不会被推断成 `production-ready`。
+
+正式项目的 `generation_queue.py init` 会自动复验 strict 门禁，并在队列中保存绑定当前项目、版本和计划指纹的 `preflight_receipt`；门禁未通过时不会创建队列。队列建立后，普通 `claim` 还需要先用 `authorize-generation` 记录一次有限次数的用户授权。
 
 当 `page-manifest.json` 声明了 Research 白名单和 story trace 时，strict 预检会同时运行故事追溯与页面科学视觉闸门。页面级 `knowledge_claims`、`science_visual_checks` 和全书级 `science_visual_consistency` 只维护在 page manifest；`storyboard.json` 不重复保存同一份页面证据。
 
@@ -37,7 +39,9 @@ PDF、打印、社媒渲染、历史迁移、发布打包和完整性能统计�
 python scripts/review_checklist.py /absolute/project b01 --version v1 --output-dir /absolute/reports/review-checklist-v1
 ```
 
-该工具只汇总 `pre_delivery` 的现有结果，输出 JSON 和 Markdown；它不会修改 `pending` 状态、创建队列、调用图片模型或代替人工批准。输出目录必须是新的，工具不会覆盖已有清单。
+该工具只汇总 `pre_delivery` 的现有结果，输出 JSON 和 Markdown；它不会修改 `pending` 状态、创建队列、调用图片模型或代替人工批准。输出目录必须是新的，工具不会覆盖已有清单。机器状态为 `blocked` 时命令返回退出码 `2`，便于自动流程停止。
+
+`build_pure_image_delivery.py` 只构建技术交付包，`delivery-validation.json` 会保留 `release_status: human_review_pending`。完成项目审核后，使用 `scripts/release_pure_image_delivery.py` 通过 `pre_delivery/strict` 并写入唯一的 `release-receipt.json`；没有人工最终批准不会进入 `released`。
 
 ## 本地验证
 

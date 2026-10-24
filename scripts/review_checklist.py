@@ -292,7 +292,7 @@ def main(argv: list[str] | None = None) -> int:
     checklist = build_review_checklist(report, records)
     paths = write_review_checklist(checklist, args.output_dir)
     print(json.dumps({"status": checklist["status"], **paths}, ensure_ascii=False, indent=2))
-    return 0
+    return 0 if checklist["status"] == "passed" else 2
 
 
 if __name__ == "__main__":

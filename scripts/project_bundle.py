@@ -131,9 +131,12 @@ def validate_production_dependencies(
         else:
             evidence.append({**item, "resolved": str(resolved)})
 
-    if explicit_profile and explicit_profile not in PRODUCTION_PROFILES:
+    invalid_profile = bool(explicit_profile and explicit_profile not in PRODUCTION_PROFILES)
+    if invalid_profile:
         warnings.append(f"PROJECT_PROFILE_UNKNOWN:{explicit_profile}")
-    if profile == "delivery-only":
+    if invalid_profile:
+        status = "blocked"
+    elif profile == "delivery-only":
         status = "blocked" if phase == "pre_generation" else "passed"
         if phase == "pre_generation":
             warnings.append("PROJECT_PROFILE_DELIVERY_ONLY")
@@ -148,7 +151,7 @@ def validate_production_dependencies(
 
     return {
         "status": status,
-        "profile": profile or "legacy-undeclared",
+        "profile": explicit_profile if invalid_profile else (profile or "legacy-undeclared"),
         "phase": phase,
         "required": required,
         "missing": missing,
