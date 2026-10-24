@@ -22,7 +22,11 @@ def load_module():
     spec = importlib.util.spec_from_file_location("generation_queue_under_test", SCRIPT_PATH)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    sys.path.insert(0, str(SCRIPT_PATH.parent))
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(str(SCRIPT_PATH.parent))
     return module
 
 
@@ -303,6 +307,63 @@ class GenerationQueueTests(unittest.TestCase):
 
         self.assertEqual("completed", completed["status"])
         self.assertEqual([1080, 1440], [completed["image_validation"]["width_px"], completed["image_validation"]["height_px"]])
+
+    def test_claim_returns_resolved_reference_paths_without_persisting_absolute_paths(self):
+        self._init()
+
+        claimed = self.module.claim_job(self.queue, 1)
+
+        resolved = claimed["resolved_paths"]
+        self.assertEqual(
+            Path(resolved["character_reference_path"]).resolve(),
+            (self.book / "characters/v1/production-reference.png").resolve(),
+        )
+        self.assertEqual(
+            Path(resolved["production_reference_path"]).resolve(),
+            (self.book / "characters/v1/production-reference.png").resolve(),
+        )
+        saved = json.loads(self.queue.read_text(encoding="utf-8"))
+        stored = next(job for job in saved["jobs"] if job["page"] == 1)
+        self.assertNotIn("resolved_paths", stored)
+
+    def test_claim_fails_closed_before_persisting_running_state_when_reference_disappears(self):
+        self._init()
+        (self.book / "characters/v1/production-reference.png").unlink()
+
+        with self.assertRaisesRegex(ValueError, "does not resolve"):
+            self.module.claim_job(self.queue, 1)
+
+        saved = json.loads(self.queue.read_text(encoding="utf-8"))
+        stored = next(job for job in saved["jobs"] if job["page"] == 1)
+        self.assertEqual(stored["status"], "pending")
+
+    def test_status_distinguishes_generated_from_review_pending(self):
+        self._init()
+        for page in (1, 2, 3):
+            self._claim_and_mark_submitted(page)
+            self.module.complete_job(self.queue, page, self._write_success_image(page))
+
+        summary = self.module.status(self.queue)
+
+        self.assertEqual(summary["generation_status"], "generated")
+        self.assertEqual(summary["review_status"], "pending")
+        self.assertEqual(summary["terminal_success_count"], 3)
+        self.assertEqual(summary["next_gate"], "human_review")
+
+    def test_request_lifecycle_records_queue_stage_timings(self):
+        self._init()
+        claimed = self.module.claim_job(self.queue, 1)
+        self.module.mark_request_submitted(self.queue, claimed["current_request_id"])
+        self.module.complete_job(self.queue, 1, self._write_success_image(1), elapsed_ms=123)
+
+        saved = json.loads(self.queue.read_text(encoding="utf-8"))
+        record = saved["request_lifecycle"][0]
+
+        self.assertIsInstance(record["submitted_at"], str)
+        self.assertIsInstance(record["stage_timings"]["claim_to_submit_ms"], int)
+        self.assertIsInstance(record["stage_timings"]["submit_to_complete_ms"], int)
+        self.assertIsInstance(record["stage_timings"]["claim_to_complete_ms"], int)
+        self.assertEqual(record["wrapper_elapsed_ms"], 123)
 
     def test_claim_batch_is_atomic_and_bounded(self):
         self._init(max_in_flight=2)

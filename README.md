@@ -18,6 +18,19 @@
 
 PDF、打印、社媒渲染、历史迁移、发布打包和完整性能统计属于按需或历史兼容分支，不会因脚本存在而自动进入默认流程。
 
+## 发布包分层
+
+默认命令生成轻量核心运行包：只带当前 `pure-images` 主链、默认 `core-v1.2` 资产、必要模板和核心依赖；打印、社媒、历史兼容脚本及阶段性 `core-v1.3`、STYLE-06、打印字体不会进入默认包。完整下载包保留这些可选能力及历史兼容资源，按需使用：
+
+```text
+python scripts/package_skill.py . ../dist/make-kids-picturebooks-v0.11.0-preview.zip --version 0.11.0-preview
+python scripts/package_skill.py . ../dist/make-kids-picturebooks-complete-v0.11.0-preview.zip --bundle --version 0.11.0-preview
+```
+
+两种发布物都排除 `projects/`；项目产物只留在本地工作区，不进入公开包。
+
+核心包安装依赖使用 `requirements-core.txt`；完整下载包才使用完整的 `requirements.txt`。
+
 ## 日常统一入口
 
 默认操作可以压缩为三个动作：

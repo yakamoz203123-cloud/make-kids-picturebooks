@@ -410,6 +410,44 @@ def _explicit_quality(queue_state: Mapping[str, Any], queue_events: list[Mapping
     return str(quality)
 
 
+def _generation_status(jobs: Sequence[Mapping[str, Any]]) -> str:
+    if not jobs:
+        return "unknown"
+    statuses = {str(job.get("status")) for job in jobs}
+    if "failed" in statuses:
+        return "failed"
+    if "running" in statuses:
+        return "running"
+    if statuses & {"pending", "retryable"}:
+        return "pending"
+    if statuses and statuses <= {"completed", "cached"}:
+        return "generated"
+    return "unknown"
+
+
+def _review_status(queue_state: Mapping[str, Any], events: Sequence[Mapping[str, Any]]) -> str:
+    values: list[Any] = []
+    if queue_state.get("review_status") is not None:
+        values.append(queue_state.get("review_status"))
+    values.extend(event.get("review_status") for event in events if "review_status" in event)
+    if not values:
+        return "pending"
+    value = str(values[-1])
+    if value not in {"pending", "approved", "failed", "not_ready"}:
+        return "pending"
+    return value
+
+
+def _next_gate(generation_status: str, review_status: str) -> str:
+    if generation_status != "generated":
+        return "generation"
+    if review_status == "pending":
+        return "human_review"
+    if review_status == "failed":
+        return "review_rework"
+    return "delivery"
+
+
 def _request_lifecycle_metrics(
     queue_state: Mapping[str, Any],
     queue_events: Sequence[Mapping[str, Any]],
@@ -431,6 +469,9 @@ def _request_lifecycle_metrics(
             "unknown_cost_count": UNKNOWN,
             "backend_task_id_unknown_count": UNKNOWN,
             "submission_observed_count": UNKNOWN,
+            "claim_to_submit_ms": UNKNOWN,
+            "submit_to_complete_ms": UNKNOWN,
+            "claim_to_complete_ms": UNKNOWN,
         }
     records = queue_state.get("request_lifecycle")
     if not isinstance(records, list) or not all(isinstance(record, Mapping) for record in records):
@@ -444,6 +485,19 @@ def _request_lifecycle_metrics(
         for event in queue_events
         if event.get("event") == "automatic_retry" or event.get("automatic_retry") is True
     ) + sum(1 for record in records if record.get("automatic_retry") is True)
+    timing_values: dict[str, list[int]] = {
+        "claim_to_submit_ms": [],
+        "submit_to_complete_ms": [],
+        "claim_to_complete_ms": [],
+    }
+    for record in records:
+        timings = record.get("stage_timings")
+        if not isinstance(timings, Mapping):
+            continue
+        for key in timing_values:
+            value = _nonnegative_int(timings.get(key))
+            if value is not None:
+                timing_values[key].append(value)
     return {
         "request_attempts": len(records),
         "artifact_record_count": sum(
@@ -465,6 +519,10 @@ def _request_lifecycle_metrics(
         "unknown_cost_count": sum(1 for record in records if record.get("cost", UNKNOWN) in {UNKNOWN, "cost_unknown", None}),
         "backend_task_id_unknown_count": sum(1 for record in records if record.get("backend_task_id", UNKNOWN) == UNKNOWN),
         "submission_observed_count": sum(1 for record in records if record.get("submission_observed") is True),
+        **{
+            key: sum(values) if values else UNKNOWN
+            for key, values in timing_values.items()
+        },
     }
 
 
@@ -500,6 +558,8 @@ def summarize_production(
     failure_rate: float | str = UNKNOWN
     if isinstance(failures, int) and isinstance(attempts, int) and attempts > 0:
         failure_rate = failures / attempts
+    generation_status = _generation_status(jobs)
+    review_status = _review_status(queue_state, metric_events)
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -514,6 +574,10 @@ def summarize_production(
         "page_rework_count": rework_rounds,
         "pages_completed": _pages_completed(jobs, metric_events),
         "output_quality": _explicit_quality(queue_state, queue_events, optional_events),
+        "generation_status": generation_status,
+        "review_status": review_status if generation_status == "generated" else "not_ready",
+        "terminal_success_count": sum(1 for job in jobs if job.get("status") in {"completed", "cached"}),
+        "next_gate": _next_gate(generation_status, review_status if generation_status == "generated" else "not_ready"),
         # Canonical V0.11 names.  The legacy aliases above remain for
         # consumers of the preview queue format.
         "wall_clock_ms": span_ms,

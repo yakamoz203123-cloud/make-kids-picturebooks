@@ -92,6 +92,9 @@ def test_resume_reports_complete_for_cached_project(tmp_path: Path) -> None:
 
     assert result["status"] == "complete"
     assert result["counts"]["cached"] == 1
+    assert result["generation_status"] == "generated"
+    assert result["review_status"] == "approved"
+    assert result["next_gate"] == "delivery"
 
 
 def test_deliver_delegates_to_existing_release_gate(tmp_path: Path) -> None:

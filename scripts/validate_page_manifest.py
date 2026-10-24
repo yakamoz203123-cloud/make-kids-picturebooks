@@ -9,6 +9,7 @@ from asset_resolver import CORE_BUNDLE_ROOT, load_core_manifest
 from continuity_contract import validate_continuity_invariants
 from layout_design import validate_layout_design
 from page_production import build_page_prompt, validate_page_spec
+from project_paths import resolve_book_image_file
 
 
 def _load_strict_asset_manifest(
@@ -88,15 +89,24 @@ def validate_page_manifest(
             return math.isfinite(value)
         except OverflowError:
             return False
-    def file_record(value, where, required):
+    def file_record(value, where, required, *, image=False):
         if value is None and not required:
             return
         if not nonempty(value):
             error(where, 'expected a nonempty path')
             return
         try:
-            candidate = (project_root / Path(value)).resolve()
-            candidate.relative_to(project_root)
+            candidate = (
+                resolve_book_image_file(project_root, value)
+                if image
+                else (project_root / Path(value)).resolve()
+            )
+            containment_root = (
+                project_root.parent
+                if image and project_root.name.lower() == 'content'
+                else project_root
+            )
+            candidate.relative_to(containment_root)
         except (OSError, ValueError):
             error(where, f'selected file must stay inside project: {value}')
             return
@@ -144,7 +154,12 @@ def validate_page_manifest(
         if 'current_image_path' not in page:
             error(where + '.current_image_path', 'required; may be null while planning')
         else:
-            file_record(page['current_image_path'], where + '.current_image_path', require_images)
+            file_record(
+                page['current_image_path'],
+                where + '.current_image_path',
+                require_images,
+                image=True,
+            )
         continuity = validate_continuity_invariants(page, project_root=project_root)
         for item in continuity["blocks"]:
             error(where + '.continuity_invariants', f'{item["code"]}: {item["message"]}')

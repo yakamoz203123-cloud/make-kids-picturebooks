@@ -1,4 +1,5 @@
 import hashlib
+import importlib.util
 import json
 import shutil
 import sys
@@ -110,6 +111,38 @@ def test_content_layout_reads_all_delivery_contract_inputs_and_business_id(tmp_p
     }
     assert validation["checks"]["model_generation_calls"] == 0
     assert not list(output.rglob("*.pptx"))
+
+
+def test_declared_image_path_prefers_canonical_book_image_over_content_preview(tmp_path: Path) -> None:
+    root = _copy_content_layout(tmp_path)
+    version = root / "books" / "b01" / "v1"
+    formal_dir = version / "images"
+    formal_dir.mkdir(parents=True)
+    shutil.copy2(version / "content" / "images" / "page-01.png", formal_dir / "page-01.png")
+
+    from project_paths import resolve_book_image_file
+
+    manifest = json.loads((version / "content" / "page-manifest.json").read_text(encoding="utf-8"))
+    local_spec = importlib.util.spec_from_file_location(
+        "build_pure_image_delivery_canonical_path_test",
+        SCRIPTS_DIR / "build_pure_image_delivery.py",
+    )
+    local_module = importlib.util.module_from_spec(local_spec)
+    sys.modules[local_spec.name] = local_module
+    sys.path.insert(0, str(SCRIPTS_DIR))
+    try:
+        local_spec.loader.exec_module(local_module)
+    finally:
+        sys.path.remove(str(SCRIPTS_DIR))
+        sys.modules.pop(local_spec.name, None)
+    candidate = local_module._candidate_images(
+        version,
+        root,
+        manifest["pages"][0],
+        content_dir=version / "content",
+    )[0]
+
+    assert candidate == (formal_dir / "page-01.png").resolve()
 
 
 def test_full_eight_page_isolated_build_has_ordered_images_and_preserves_sources(tmp_path: Path) -> None:

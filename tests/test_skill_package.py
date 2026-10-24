@@ -125,16 +125,21 @@ class SkillPackageTests(unittest.TestCase):
                 names = set(archive.namelist())
                 required = {
                     f"{PACKAGE_NAME}/scripts/layout_design.py",
-                    f"{PACKAGE_NAME}/scripts/layout_styles.py",
-                    f"{PACKAGE_NAME}/scripts/render_social.py",
                     f"{PACKAGE_NAME}/scripts/preflight_image_generation.py",
                     f"{PACKAGE_NAME}/assets/book-template.json",
                     f"{PACKAGE_NAME}/assets/education-goal-template.json",
                     f"{PACKAGE_NAME}/assets/page-manifest-template.json",
                     f"{PACKAGE_NAME}/references/education-goals.md",
-                    f"{PACKAGE_NAME}/references/social-output.md",
                 }
                 self.assertTrue(required <= names)
+                for optional in (
+                    "scripts/layout_styles.py",
+                    "scripts/render_social.py",
+                    "scripts/render_social_book.py",
+                    "references/social-output.md",
+                    "references/printing.md",
+                ):
+                    self.assertNotIn(f"{PACKAGE_NAME}/{optional}", names)
                 self.assertFalse(any("/source/" in name or "/exports/" in name for name in names))
                 public_core_prefix = f"{PACKAGE_NAME}/assets/characters/core-v1.2/"
                 character_paths = [
@@ -167,11 +172,204 @@ class SkillPackageTests(unittest.TestCase):
                 staged_paths = [
                     name for name in names if f"/assets/characters/core-v1.3/" in name
                 ]
-                self.assertTrue(staged_paths)
+                self.assertFalse(staged_paths)
                 manifest = json.loads(archive.read(f"{PACKAGE_NAME}/MANIFEST.json"))
                 self.assertEqual(manifest["version"], VERSION)
                 listed = {entry["path"] for entry in manifest["files"]}
                 self.assertEqual(listed, names - {f"{PACKAGE_NAME}/MANIFEST.json"})
+
+    def test_runtime_package_excludes_development_and_compatibility_material(self):
+        from package_skill import package_skill
+
+        repository = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as td:
+            output = Path(td) / f"make-kids-picturebooks-v{VERSION}.zip"
+            package_skill(repository, output, VERSION)
+            with zipfile.ZipFile(output) as archive:
+                names = set(archive.namelist())
+
+            forbidden_prefixes = (
+                f"{PACKAGE_NAME}/.github/",
+                f"{PACKAGE_NAME}/tests/",
+                f"{PACKAGE_NAME}/evals/",
+                f"{PACKAGE_NAME}/docs/",
+                f"{PACKAGE_NAME}/.pytest_cache/",
+            )
+            self.assertFalse(
+                any(name.startswith(prefix) for name in names for prefix in forbidden_prefixes)
+            )
+            for filename in (
+                "README.md",
+                "RELEASE.md",
+                "ASSET_CONTRACT_HARDENING_REPORT.md",
+                "WORKFLOW_GATE_HARDENING_REPORT.md",
+                "UNIFIED_WORKFLOW_ENTRY_REPORT.md",
+                "scripts/check_eval_results.py",
+            ):
+                self.assertNotIn(f"{PACKAGE_NAME}/{filename}", names)
+
+            required = {
+                f"{PACKAGE_NAME}/SKILL.md",
+                f"{PACKAGE_NAME}/agents/openai.yaml",
+                f"{PACKAGE_NAME}/scripts/workflow.py",
+                f"{PACKAGE_NAME}/references/production-workflow.md",
+                f"{PACKAGE_NAME}/assets/education-goal-template.json",
+            }
+            self.assertTrue(required <= names)
+
+    def test_runtime_package_excludes_project_artifacts(self):
+        from package_skill import package_skill
+
+        repository = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as td:
+            output = Path(td) / f"make-kids-picturebooks-v{VERSION}.zip"
+            package_skill(repository, output, VERSION)
+            with zipfile.ZipFile(output) as archive:
+                names = set(archive.namelist())
+
+            self.assertFalse(
+                any(name.startswith(f"{PACKAGE_NAME}/projects/") for name in names)
+            )
+
+    def test_runtime_package_excludes_optional_asset_modules(self):
+        from package_skill import package_skill
+
+        repository = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as td:
+            output = Path(td) / f"make-kids-picturebooks-v{VERSION}.zip"
+            package_skill(repository, output, VERSION)
+            with zipfile.ZipFile(output) as archive:
+                names = set(archive.namelist())
+
+        optional_prefixes = (
+            f"{PACKAGE_NAME}/assets/characters/core-v1.3/",
+            f"{PACKAGE_NAME}/assets/style-06-v0.1/",
+        )
+        self.assertFalse(
+            any(name.startswith(prefix) for name in names for prefix in optional_prefixes)
+        )
+        for filename in (
+            "assets/kidsbook-print.ttf",
+            "assets/font-license.txt",
+            "assets/font-provenance.json",
+        ):
+            self.assertNotIn(f"{PACKAGE_NAME}/{filename}", names)
+
+        required_default_assets = {
+            f"{PACKAGE_NAME}/assets/characters/core-v1.2/manifest.json",
+            f"{PACKAGE_NAME}/assets/characters/core-v1.2/manifest-receipt.json",
+            f"{PACKAGE_NAME}/assets/style-registry.json",
+        }
+        self.assertTrue(required_default_assets <= names)
+
+    def test_complete_download_bundle_keeps_optional_modules_without_projects(self):
+        from package_skill import package_download_bundle
+
+        repository = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as td:
+            output = Path(td) / f"make-kids-picturebooks-complete-v{VERSION}.zip"
+            package_download_bundle(repository, [], output, VERSION)
+            with zipfile.ZipFile(output) as archive:
+                names = set(archive.namelist())
+
+        self.assertIn(
+            f"{PACKAGE_NAME}/assets/characters/core-v1.3/manifest.json",
+            names,
+        )
+        self.assertIn(f"{PACKAGE_NAME}/assets/style-06-v0.1/manifest.json", names)
+        self.assertIn(f"{PACKAGE_NAME}/assets/kidsbook-print.ttf", names)
+        self.assertIn(f"{PACKAGE_NAME}/scripts/render_social_book.py", names)
+        self.assertIn(f"{PACKAGE_NAME}/scripts/render_book.py", names)
+        self.assertIn(f"{PACKAGE_NAME}/scripts/diagnose_project_paths.py", names)
+        self.assertIn(f"{PACKAGE_NAME}/references/social-output.md", names)
+        self.assertIn(f"{PACKAGE_NAME}/references/printing.md", names)
+        self.assertIn(f"{PACKAGE_NAME}/requirements.txt", names)
+        self.assertFalse(any(name.startswith(f"{PACKAGE_NAME}/projects/") for name in names))
+
+    def test_runtime_package_excludes_optional_code_and_dependency_modules(self):
+        from package_skill import package_skill
+
+        repository = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as td:
+            output = Path(td) / f"make-kids-picturebooks-v{VERSION}.zip"
+            package_skill(repository, output, VERSION)
+            with zipfile.ZipFile(output) as archive:
+                names = set(archive.namelist())
+
+        for optional in (
+            "scripts/accept_book.py",
+            "scripts/accept_social_book.py",
+            "scripts/diagnose_project_paths.py",
+            "scripts/export_book.py",
+            "scripts/impose_booklet.py",
+            "scripts/incremental_archive.py",
+            "scripts/layout_styles.py",
+            "scripts/migrate_social_only_layout.py",
+            "scripts/package_project.py",
+            "scripts/package_skill.py",
+            "scripts/prepare_font.py",
+            "scripts/production_metrics.py",
+            "scripts/project_state.py",
+            "scripts/render_book.py",
+            "scripts/render_social.py",
+            "scripts/render_social_book.py",
+            "scripts/validate_exports.py",
+            "references/printing.md",
+            "references/social-output.md",
+            "requirements.txt",
+            "requirements-optional.txt",
+        ):
+            self.assertNotIn(f"{PACKAGE_NAME}/{optional}", names)
+        self.assertIn(f"{PACKAGE_NAME}/requirements-core.txt", names)
+
+    def test_full_dependency_manifest_composes_core_and_optional_requirements(self):
+        repository = Path(__file__).resolve().parents[1]
+        requirements = (repository / "requirements.txt").read_text(encoding="utf-8")
+
+        self.assertIn("-r requirements-core.txt", requirements)
+        self.assertIn("-r requirements-optional.txt", requirements)
+
+    def test_checked_in_manifest_matches_generated_runtime_manifest(self):
+        from package_skill import package_skill
+
+        repository = Path(__file__).resolve().parents[1]
+        checked_in = json.loads((repository / "MANIFEST.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as td:
+            output = Path(td) / f"make-kids-picturebooks-v{VERSION}.zip"
+            package_skill(repository, output, VERSION)
+            with zipfile.ZipFile(output) as archive:
+                generated = json.loads(
+                    archive.read(f"{PACKAGE_NAME}/MANIFEST.json")
+                )
+
+        self.assertEqual(checked_in, generated)
+
+    def test_checked_in_manifest_has_no_removed_runtime_paths(self):
+        repository = Path(__file__).resolve().parents[1]
+        manifest = json.loads((repository / "MANIFEST.json").read_text(encoding="utf-8"))
+        paths = {entry["path"] for entry in manifest["files"]}
+
+        for prefix in (
+            f"{PACKAGE_NAME}/.github/",
+            f"{PACKAGE_NAME}/tests/",
+            f"{PACKAGE_NAME}/evals/",
+            f"{PACKAGE_NAME}/docs/",
+            f"{PACKAGE_NAME}/.pytest_cache/",
+        ):
+            self.assertFalse(any(path.startswith(prefix) for path in paths))
+        for filename in (
+            "README.md",
+            "RELEASE.md",
+            "ASSET_CONTRACT_HARDENING_REPORT.md",
+            "WORKFLOW_GATE_HARDENING_REPORT.md",
+            "UNIFIED_WORKFLOW_ENTRY_REPORT.md",
+            "scripts/check_eval_results.py",
+            "references/adaptation.md",
+            "references/age-bands.md",
+            "references/art-direction.md",
+            "references/topic-selection.md",
+        ):
+            self.assertNotIn(f"{PACKAGE_NAME}/{filename}", paths)
 
     def test_aesthetic_layout_fixture_is_multi_page_multi_style_and_social_ready(self):
         repository = Path(__file__).resolve().parents[1]

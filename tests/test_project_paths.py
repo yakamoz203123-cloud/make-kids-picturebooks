@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from project_paths import (
     normalize_relative_path,
     require_project_file,
+    resolve_book_image_file,
     resolve_project_file,
 )
 
@@ -71,6 +72,25 @@ class ProjectPathTests(unittest.TestCase):
             with self.subTest(value=type(value).__name__):
                 with self.assertRaises(TypeError):
                     normalize_relative_path(self.root, value)
+
+    def test_book_image_resolver_prefers_formal_book_images_over_content_preview(self):
+        content = self.root / "content"
+        formal = self.root / "images" / "page-01.png"
+        preview = content / "images" / "page-01.png"
+        formal.parent.mkdir(parents=True)
+        preview.parent.mkdir(parents=True)
+        formal.write_bytes(b"formal")
+        preview.write_bytes(b"preview")
+
+        self.assertEqual(resolve_book_image_file(content, "images/page-01.png"), formal.resolve())
+
+    def test_book_image_resolver_keeps_historical_content_fallback(self):
+        content = self.root / "content"
+        preview = content / "images" / "page-01.png"
+        preview.parent.mkdir(parents=True)
+        preview.write_bytes(b"preview")
+
+        self.assertEqual(resolve_book_image_file(content, "images/page-01.png"), preview.resolve())
 
 
 if __name__ == "__main__":

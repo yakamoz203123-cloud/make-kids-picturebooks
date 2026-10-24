@@ -31,7 +31,6 @@ class Phase1AssetTests(unittest.TestCase):
                     "assets/scene-registry.json",
                     "assets/prop-registry.json",
                     "scripts/asset_catalog.py",
-                    "scripts/diagnose_project_paths.py",
                 ):
                     self.assertIn(f"make-kids-picturebooks/{relative}", names)
 

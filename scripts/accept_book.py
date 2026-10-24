@@ -7,7 +7,7 @@ import argparse,hashlib,json,os,re,tempfile
 from pathlib import Path
 import pymupdf as fitz
 from asset_registry import collect_declared_assets
-from project_paths import normalize_relative_path,resolve_project_file
+from project_paths import normalize_relative_path,resolve_book_image_file,resolve_project_file
 from validate_page_manifest import validate_page_manifest
 from layout_design import get_social_profile,image_matches_aspect_ratio,validate_layout_design,validate_layout_review
 from impose_booklet import booklet_pairs,MM
@@ -248,6 +248,7 @@ def check_book(project_path,book_id):
         except ValueError:raise ValueError(f'验收资产必须位于项目内: {p}')
         files.add(relative);return p
     def track(path,parent=base):return track_resolved(resolve_project_file(parent,path))
+    def track_image(path,parent=base):return track_resolved(resolve_book_image_file(parent,path))
     def artifact(key):return track(artifacts[key])
     try:
         approved_characters_dir = None
@@ -299,7 +300,7 @@ def check_book(project_path,book_id):
             errors.extend(layout_design_errors(saved.get('layout_design'),number,'清单layout_design'))
             if saved.get('characters_version')!=book['characters_version']:errors.append(f'页{number}: 角色版本不一致')
             track(saved['current_prompt_path'],manifest_path.parent)
-            selected=track(saved['current_image_path'],manifest_path.parent)
+            selected=track_image(saved['current_image_path'],manifest_path.parent)
             reference_value=saved.get('character_reference_path')
             if isinstance(reference_value,(str,Path)) and str(reference_value).strip():
                 try:

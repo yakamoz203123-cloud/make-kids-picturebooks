@@ -10,7 +10,7 @@
       → 失败页局部返工 → pure-images 确定性交付 → 最终验收
 
 续做项目：项目摘要 → 当前页任务/依赖 → 有效预检回执复用检查
-      → 当前页轻量检查 → 串行生图 → 页面审核
+      → 一页一次轻量检查 → 串行生图 → 页面审核
 ```
 
 默认不进入 PDF、打印、社媒渲染、历史迁移、发布打包或完整性能统计；这些是按需分支或历史兼容分支。
@@ -57,6 +57,17 @@ python3 "$SKILL_DIR/scripts/workflow.py" deliver /absolute/project b01 /absolute
 `project_preflight.py` 的 `production_dependency_closure` 是只读门禁：它不复制文件、不创建队列、不调用图片模型，只报告 `missing`、`outside_book`、`warnings` 和实际解析证据。缺少生产依赖时，先修复项目包或明确降级为 `delivery-only`，不能靠跳过 strict 继续生图。
 
 ## 1. 新项目：一次完成规划
+
+如果需要为新故事建立测试副本，不要手工递归复制整个项目。统一使用：
+
+```bash
+python3 "$SKILL_DIR/scripts/clone_project_for_test.py" \
+  /absolute/source-project /absolute/new-test-project
+```
+
+该入口只复制可复用的契约、研究、角色、画风和提示词，自动排除旧的
+`delivery/`、书籍根目录 `images/`、`content/images/`、生产队列、恢复候选和
+测试报告。目标目录已存在时会直接停止，避免把两册项目混在一起。
 
 这是一次规划，不在逐页生产阶段重复整本研究、故事编辑或全书审计。
 
@@ -129,7 +140,25 @@ python3 "$SKILL_DIR/scripts/generation_queue.py" authorize-generation \
 → 页面审核 pending/通过/失败
 ```
 
+主机图像工具返回值可能是说明文本，而不是单一路径；如果文本同时包含生成
+目录和实际 `exec-*.png` 文件，先用统一解析器取出最后一个具体 PNG，再进入
+归一化和队列登记：
+
+```bash
+python3 "$SKILL_DIR/scripts/generated_image_path.py" "$HOST_IMAGE_TOOL_OUTPUT"
+```
+
+解析器失败时必须停在“等待产物路径”并报告错误，不能把整段说明文本传给
+`Image.open`，也不能重复调用图像模型。严格顺序保持为：
+`claim → imagegen → resolve path → normalize/copy → mark-submitted → complete`。
+
 队列的 `cached` 只表示当前正式画布、比例、可解码性和请求 fingerprint 均满足缓存条件，不表示人工视觉审核已经通过；最终仍需 `review.json` 和逐页视觉证据。
+
+正式页面 PNG 的唯一规范位置是书籍版本根目录下的 `images/`，页面清单继续使用 `images/page-XX.png` 作为书籍相对路径；`content/images/` 只允许保存 JPG 预览或联系图。历史 content-layout 项目如果没有书籍根目录图片，读取工具可以兼容回退，但新生成结果不得再复制两份正式 PNG。领取页面时，队列会返回 `resolved_paths`，主机应直接使用其中已校验的绝对参考路径，不要手工拼接路径。
+
+查看队列或 `workflow.py resume` 的结果时，优先看 `generation_status`、`review_status`、`terminal_success_count` 和 `next_gate`：`generated` 只表示图片已生成并通过工程登记；`review_status=pending` 表示仍需人工审核；只有审核批准后才进入 `delivery`。旧的页面级 `completed`/`cached` 值保留用于兼容，不单独作为交付结论。
+
+每条请求生命周期会自动记录 `claim_to_submit_ms`、`submit_to_complete_ms` 和 `claim_to_complete_ms`。这些是队列可观测时间；`model_wait_ms`、成本和跨工具的真实模型等待仍保持 `unknown`，除非主机明确提供证据。
 
 `build_pure_image_delivery.py` 生成的是技术包，`delivery-validation.json.release_status` 保持 `human_review_pending`。完成审核后再运行：
 

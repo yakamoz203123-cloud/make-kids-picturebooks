@@ -20,6 +20,7 @@ from typing import Any, Mapping
 from PIL import Image, UnidentifiedImageError
 
 from production_timing import PhaseRecorder, summarize_phase_events
+from project_paths import resolve_book_image_file
 from render_contact_sheet import render_contact_sheet
 
 
@@ -249,9 +250,8 @@ def _candidate_images(
     number = int(page["page"])
     declared = page.get("current_image_path")
     if isinstance(declared, str) and declared.strip():
-        candidate = (content_root / declared.replace("\\", "/")).resolve()
         try:
-            candidate.relative_to(content_root)
+            candidate = resolve_book_image_file(content_root, declared)
         except ValueError as exc:
             raise DeliveryError("IMAGE_PATH_ESCAPES_BOOK") from exc
         return [candidate]

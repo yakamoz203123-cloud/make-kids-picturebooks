@@ -14,6 +14,32 @@ def read(relative_path: str) -> str:
 
 
 class SkillGuidanceTests(unittest.TestCase):
+    def test_input_selection_is_one_routed_reference(self) -> None:
+        skill = read("SKILL.md")
+        input_selection = SKILL_DIR / "references/input-selection.md"
+
+        self.assertIn("references/input-selection.md", skill)
+        self.assertTrue(input_selection.is_file())
+        guidance = input_selection.read_text(encoding="utf-8")
+        for term in (
+            "来源安全边界",
+            "3—4、5—7 或 8—10",
+            "selected_topics",
+            "chapter_order",
+            "topic_selection",
+            "候选",
+            "deferred",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, guidance)
+
+        for obsolete in (
+            "references/adaptation.md",
+            "references/age-bands.md",
+            "references/topic-selection.md",
+        ):
+            self.assertFalse((SKILL_DIR / obsolete).exists(), obsolete)
+
     def test_v2_role_lock_and_story_event_alignment_are_explicit_rules(self) -> None:
         combined = "\n".join(
             read(path)
@@ -489,13 +515,11 @@ class SkillGuidanceTests(unittest.TestCase):
     def test_layout_and_social_guidance_contract_is_explicit(self) -> None:
         skill = read("SKILL.md")
         composition = read("references/composition.md")
-        art_direction = read("references/art-direction.md")
         printing = read("references/printing.md")
         acceptance = read("references/acceptance.md")
         social = read("references/social-output.md")
-        combined = "\n".join(
-            (skill, composition, art_direction, printing, acceptance, social)
-        )
+        combined = "\n".join((skill, composition, printing, acceptance, social))
+        self.assertFalse((SKILL_DIR / "references/art-direction.md").exists())
 
         for term in (
             "layout_design",
@@ -543,12 +567,11 @@ class SkillGuidanceTests(unittest.TestCase):
         readme = read("README.md")
         rubric = read("evals/rubric.md")
         composition = read("references/composition.md")
-        art_direction = read("references/art-direction.md")
         printing = read("references/printing.md")
         acceptance = read("references/acceptance.md")
         social = read("references/social-output.md")
         combined = "\n".join(
-            (skill, readme, rubric, composition, art_direction, printing, acceptance, social)
+            (skill, readme, rubric, composition, printing, acceptance, social)
         )
 
         for term in (

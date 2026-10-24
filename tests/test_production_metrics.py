@@ -139,6 +139,22 @@ class ProductionMetricsTests(unittest.TestCase):
         self.assertEqual(result["rework_rounds"], 0)
         self.assertEqual(result["cache_hits"], 1)
 
+    def test_generation_status_is_separate_from_review_status(self):
+        result = self.module.summarize_production(
+            {
+                "schema_version": 1,
+                "jobs": [
+                    {"page": 1, "status": "completed", "attempts": 1},
+                    {"page": 2, "status": "cached", "attempts": 0},
+                ],
+            }
+        )
+
+        self.assertEqual(result["generation_status"], "generated")
+        self.assertEqual(result["review_status"], "pending")
+        self.assertEqual(result["terminal_success_count"], 2)
+        self.assertEqual(result["next_gate"], "human_review")
+
     def test_cli_rejects_output_over_phase_events(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
@@ -425,6 +441,34 @@ class ProductionMetricsTests(unittest.TestCase):
         self.assertEqual(lifecycle["unknown_model_wait_count"], 2)
         self.assertEqual(lifecycle["unknown_cost_count"], 2)
         self.assertEqual(lifecycle["backend_task_id_unknown_count"], 2)
+
+    def test_request_lifecycle_metrics_include_observed_queue_stage_timings(self):
+        result = self.module.summarize_production(
+            {
+                "schema_version": 1,
+                "jobs": [],
+                "request_lifecycle": [
+                    {
+                        "request_id": "request-1",
+                        "terminal_state": "succeeded",
+                        "wrapper_elapsed_ms": 700,
+                        "model_wait_ms": "unknown",
+                        "cost": "cost_unknown",
+                        "submission_observed": True,
+                        "backend_task_id": "task-1",
+                        "stage_timings": {
+                            "claim_to_submit_ms": 120,
+                            "submit_to_complete_ms": 580,
+                            "claim_to_complete_ms": 700,
+                        },
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(result["request_lifecycle"]["claim_to_submit_ms"], 120)
+        self.assertEqual(result["request_lifecycle"]["submit_to_complete_ms"], 580)
+        self.assertEqual(result["request_lifecycle"]["claim_to_complete_ms"], 700)
 
     def test_legacy_queue_without_lifecycle_keeps_lifecycle_metrics_unknown(self):
         result = self.module.summarize_production({"schema_version": 1, "jobs": []})

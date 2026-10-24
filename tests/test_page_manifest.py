@@ -153,6 +153,24 @@ class ManifestTests(unittest.TestCase):
         (self.base / 'old.png').write_bytes(b'old')
         self.assertTrue(self.validate(self.data, self.base, True))
 
+    def test_content_manifest_resolves_formal_image_from_book_images(self):
+        self.complete()
+        book = self.base / 'book'
+        content = book / 'content'
+        content.mkdir(parents=True)
+        (content / 'prompt.md').write_text('scene', encoding='utf-8')
+        (content / 'characters/v1').mkdir(parents=True)
+        (content / 'characters/v1/reference.png').write_bytes(b'approved character reference')
+        (book / 'images').mkdir(parents=True)
+        (book / 'images/page-01.png').write_bytes(b'formal image')
+
+        manifest = copy.deepcopy(self.data)
+        manifest['pages'][0]['current_prompt_path'] = 'prompt.md'
+        manifest['pages'][0]['character_reference_path'] = 'characters/v1/reference.png'
+        manifest['pages'][0]['current_image_path'] = 'images/page-01.png'
+
+        self.assertEqual([], self.validate(manifest, content, True))
+
     def test_knowledge_must_pass_and_have_evidence(self):
         self.complete()
         for check in ({'status': 'pending', 'evidence': 'todo'}, {'status': 'failed', 'evidence': 'wrong'}, {'status': 'passed', 'evidence': ''}):

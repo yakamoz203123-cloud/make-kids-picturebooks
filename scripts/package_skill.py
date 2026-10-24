@@ -10,7 +10,44 @@ from pathlib import Path
 
 from asset_hashing import canonical_bytes
 
-EXCLUDED_DIRS = {".git", ".superpowers", "__pycache__"}
+EXCLUDED_DIRS = {".git", ".superpowers", "__pycache__", "projects"}
+RUNTIME_EXCLUDED_DIRS = {".github", ".pytest_cache", "docs", "evals", "tests"}
+RUNTIME_EXCLUDED_PATHS = {
+    "assets/characters/core-v1.3",
+    "assets/style-06-v0.1",
+}
+RUNTIME_EXCLUDED_FILES = {
+    "ASSET_CONTRACT_HARDENING_REPORT.md",
+    "README.md",
+    "RELEASE.md",
+    "UNIFIED_WORKFLOW_ENTRY_REPORT.md",
+    "WORKFLOW_GATE_HARDENING_REPORT.md",
+    "scripts/check_eval_results.py",
+    "scripts/accept_book.py",
+    "scripts/accept_social_book.py",
+    "scripts/diagnose_project_paths.py",
+    "scripts/export_book.py",
+    "scripts/impose_booklet.py",
+    "scripts/incremental_archive.py",
+    "scripts/layout_styles.py",
+    "scripts/migrate_social_only_layout.py",
+    "scripts/package_project.py",
+    "scripts/package_skill.py",
+    "scripts/prepare_font.py",
+    "scripts/production_metrics.py",
+    "scripts/project_state.py",
+    "scripts/render_book.py",
+    "scripts/render_social.py",
+    "scripts/render_social_book.py",
+    "scripts/validate_exports.py",
+    "references/printing.md",
+    "references/social-output.md",
+    "assets/font-license.txt",
+    "assets/font-provenance.json",
+    "assets/kidsbook-print.ttf",
+    "requirements.txt",
+    "requirements-optional.txt",
+}
 PACKAGE_NAME = "make-kids-picturebooks"
 
 
@@ -39,7 +76,9 @@ def _resolved_inside(root: Path, candidate: Path) -> bool:
     return True
 
 
-def _skill_files(skill_dir: Path) -> list[tuple[str, Path]]:
+def _skill_files(
+    skill_dir: Path, *, runtime_only: bool = False
+) -> list[tuple[str, Path]]:
     root = Path(skill_dir).resolve()
     if not root.is_dir():
         raise ValueError("技能目录不存在")
@@ -59,6 +98,17 @@ def _skill_files(skill_dir: Path) -> list[tuple[str, Path]]:
             continue
         if any(part in EXCLUDED_DIRS for part in relative_parts) or path.suffix == ".pyc":
             continue
+        relative_name = "/".join(relative_parts)
+        if runtime_only:
+            excluded_path = any(
+                relative_name == prefix or relative_name.startswith(f"{prefix}/")
+                for prefix in RUNTIME_EXCLUDED_PATHS
+            )
+            excluded_file = relative_name in RUNTIME_EXCLUDED_FILES
+            if any(part in RUNTIME_EXCLUDED_DIRS for part in relative_parts):
+                continue
+            if excluded_path or excluded_file:
+                continue
         if path.is_symlink():
             raise ValueError(f"技能包不允许符号链接: {path}")
         if not _resolved_inside(root, path):
@@ -124,7 +174,7 @@ def package_skill(skill_dir: Path, output: Path, version: str) -> dict:
     if _resolved_inside(root, output):
         raise ValueError("技能包输出不能位于技能目录内")
 
-    files = _skill_files(root)
+    files = _skill_files(root, runtime_only=True)
     top = _package_name(root)
     entries: list[tuple[str, bytes | Path]] = []
     manifest_files = []

@@ -475,6 +475,25 @@ def _relative_to_book(book_dir: Path, path: Path) -> str:
         raise ValueError(f"path must stay inside book directory: {path}") from exc
 
 
+def _resolved_runtime_paths(book_dir: Path, job: Mapping[str, Any]) -> dict[str, str]:
+    """Return host-ready reference paths without storing machine paths."""
+    content_dir, _layout = _resolve_content_layout(book_dir)
+    result: dict[str, str] = {}
+    for field in ("character_reference_path", "production_reference_path"):
+        value = job.get(field)
+        resolved = _resolve_book_path(book_dir, str(value) if value else None, content_dir=content_dir)
+        if resolved is None or not resolved.is_file():
+            raise ValueError(f"{field} does not resolve to an existing book-local file: {value}")
+        result[field] = str(resolved)
+    return result
+
+
+def _with_runtime_paths(book_dir: Path, job: Mapping[str, Any]) -> dict[str, Any]:
+    result = copy.deepcopy(dict(job))
+    result["resolved_paths"] = _resolved_runtime_paths(book_dir, job)
+    return result
+
+
 def _story_dependency_value(page: dict[str, Any]) -> Any:
     if "story_dependency" in page and page["story_dependency"] is not None:
         return page["story_dependency"]
@@ -1003,9 +1022,15 @@ def _new_request_record(
         "attempt": int(job.get("attempts", 0)),
         "local_started_at": job.get("started_at") or UNKNOWN,
         "submission_observed": False,
+        "submitted_at": None,
         "backend_task_id": UNKNOWN,
         "wrapper_finished_at": None,
         "wrapper_elapsed_ms": UNKNOWN,
+        "stage_timings": {
+            "claim_to_submit_ms": UNKNOWN,
+            "submit_to_complete_ms": UNKNOWN,
+            "claim_to_complete_ms": UNKNOWN,
+        },
         "terminal_state": "running",
         "artifact_path": None,
         "artifact_sha256": None,
@@ -1015,6 +1040,33 @@ def _new_request_record(
         "recovery_of_request_id": recovery_of_request_id,
         "recovery_approval": recovery_approval,
         "local_timeout_observed": False,
+    }
+
+
+def _timestamp_elapsed_ms(start: Any, end: Any) -> int | str:
+    if not isinstance(start, str) or not isinstance(end, str) or not start.strip() or not end.strip():
+        return UNKNOWN
+    try:
+        start_at = datetime.fromisoformat(start.replace("Z", "+00:00"))
+        end_at = datetime.fromisoformat(end.replace("Z", "+00:00"))
+    except ValueError:
+        return UNKNOWN
+    return max(0, round((end_at - start_at).total_seconds() * 1000))
+
+
+def _stage_timings(
+    record: Mapping[str, Any],
+    *,
+    submitted_at: str | None = None,
+    completed_at: str | None = None,
+) -> dict[str, int | str]:
+    submitted = submitted_at if submitted_at is not None else record.get("submitted_at")
+    completed = completed_at if completed_at is not None else record.get("wrapper_finished_at")
+    claimed = record.get("local_started_at")
+    return {
+        "claim_to_submit_ms": _timestamp_elapsed_ms(claimed, submitted),
+        "submit_to_complete_ms": _timestamp_elapsed_ms(submitted, completed),
+        "claim_to_complete_ms": _timestamp_elapsed_ms(claimed, completed),
     }
 
 
@@ -1129,6 +1181,14 @@ def validate_request_lifecycle_record(
         raise ValueError("wrapper_elapsed_ms must be a non-negative integer or 'unknown'")
     if record.get("model_wait_ms") != UNKNOWN and (type(record.get("model_wait_ms")) is not int or record["model_wait_ms"] < 0):
         raise ValueError("model_wait_ms must be a non-negative integer or 'unknown'")
+    stage_timings = record.get("stage_timings")
+    if stage_timings is not None:
+        if not isinstance(stage_timings, Mapping):
+            raise ValueError("stage_timings must be an object")
+        for key in ("claim_to_submit_ms", "submit_to_complete_ms", "claim_to_complete_ms"):
+            value = stage_timings.get(key, UNKNOWN)
+            if value != UNKNOWN and (type(value) is not int or value < 0):
+                raise ValueError(f"{key} must be a non-negative integer or 'unknown'")
     artifact_path = record.get("artifact_path")
     artifact_hash = record.get("artifact_sha256")
     if artifact_path in (None, UNKNOWN):
@@ -1594,9 +1654,10 @@ def claim_job(
             job,
             generation_authorization_id=authorization_id,
         )
+        runtime_result = _with_runtime_paths(Path(state["book_dir"]), result)
         _consume_generation_authorization(state, authorization_id, 1)
         _save_queue(queue_path, state)
-        return result
+        return runtime_result
 
 
 def claim_batch(
@@ -1640,6 +1701,10 @@ def claim_batch(
             )
             for job in jobs
         ]
+        runtime_results = [
+            _with_runtime_paths(Path(state["book_dir"]), job)
+            for job in claimed_jobs
+        ]
         _consume_generation_authorization(state, authorization_id, len(jobs))
         _append_event(
             state,
@@ -1653,7 +1718,7 @@ def claim_batch(
             ],
         )
         _save_queue(queue_path, state)
-        return copy.deepcopy(claimed_jobs)
+        return runtime_results
 
 
 def complete_job(
@@ -1688,6 +1753,7 @@ def complete_job(
             job.get("declared_aspect_ratio"),
             expected_canvas_tuple,
         )
+        finished_at = _now()
         job.update(
             {
                 "status": "completed",
@@ -1695,21 +1761,23 @@ def complete_job(
                 "output_sha256": _file_hash(output),
                 "image_validation": image_validation,
                 "elapsed_ms": elapsed_ms,
-                "finished_at": _now(),
+                "finished_at": finished_at,
                 "updated_at": _now(),
                 "last_error": None,
             }
         )
         if request is not None:
+            stage_timings = _stage_timings(request, completed_at=finished_at)
             _update_request_record(
                 state,
                 request["request_id"],
                 "request_completed",
                 terminal_state="succeeded",
-                wrapper_finished_at=job["finished_at"],
+                wrapper_finished_at=finished_at,
                 wrapper_elapsed_ms=elapsed_ms if type(elapsed_ms) is int and elapsed_ms >= 0 else UNKNOWN,
                 artifact_path=relative,
                 artifact_sha256=job["output_sha256"],
+                stage_timings=stage_timings,
             )
         _append_event(
             state,
@@ -1791,12 +1859,15 @@ def mark_request_submitted(
                 raise ValueError("backend_task_id conflicts with the existing submission record")
             if current_backend == backend or backend == UNKNOWN:
                 return copy.deepcopy(record)
+        submitted_at = _now()
         result = _update_request_record(
             state,
             request_id,
             "request_submitted",
             submission_observed=True,
             backend_task_id=backend,
+            submitted_at=submitted_at,
+            stage_timings=_stage_timings(record, submitted_at=submitted_at),
         )
         _save_queue(queue_path, state)
         return result
@@ -2068,6 +2139,57 @@ def reset_page(queue_path: str | Path, page: int, reason: str) -> dict[str, Any]
         return state
 
 
+def _review_status(state: Mapping[str, Any]) -> str:
+    review_path = Path(str(state.get("book_dir", ""))) / "review" / "review.json"
+    if not review_path.is_file():
+        return "pending"
+    try:
+        review = _read_json(review_path)
+    except ValueError:
+        return "pending"
+    rows = review.get("pages")
+    if isinstance(rows, list) and any(
+        isinstance(row, Mapping)
+        and str(row.get("status", "")).lower() in {"failed", "generation_failed_timeout", "not_reviewable"}
+        for row in rows
+    ):
+        return "failed"
+    if review.get("user_final_approval") in {True, "approved", "approved_for_formal_use"}:
+        return "approved"
+    return "pending"
+
+
+def _queue_phase_status(state: Mapping[str, Any]) -> dict[str, str]:
+    jobs = [job for job in state.get("jobs", []) if isinstance(job, Mapping)]
+    statuses = {str(job.get("status")) for job in jobs}
+    if not jobs:
+        generation_status = "unknown"
+    elif "failed" in statuses:
+        generation_status = "failed"
+    elif "running" in statuses:
+        generation_status = "running"
+    elif statuses & RETRYABLE_STATUSES:
+        generation_status = "pending"
+    elif statuses and statuses <= DONE_STATUSES:
+        generation_status = "generated"
+    else:
+        generation_status = "unknown"
+    review_status = _review_status(state) if generation_status == "generated" else "not_ready"
+    if generation_status != "generated":
+        next_gate = "generation"
+    elif review_status == "pending":
+        next_gate = "human_review"
+    elif review_status == "failed":
+        next_gate = "review_rework"
+    else:
+        next_gate = "delivery"
+    return {
+        "generation_status": generation_status,
+        "review_status": review_status,
+        "next_gate": next_gate,
+    }
+
+
 def status(queue_path: str | Path) -> dict[str, Any]:
     state = _load_queue(Path(queue_path).resolve())
     counts = {key: 0 for key in ("pending", "running", "retryable", "failed", "completed", "cached")}
@@ -2080,6 +2202,7 @@ def status(queue_path: str | Path) -> dict[str, Any]:
         if isinstance(job.get("elapsed_ms"), int):
             elapsed_ms += int(job["elapsed_ms"])
     failures = sum(1 for event in state.get("events", []) if event.get("event") == "failed")
+    phase = _queue_phase_status(state)
     return {
         "queue_id": state["queue_id"],
         "coordination_mode": state.get("coordination_mode", COORDINATION_MODE),
@@ -2087,6 +2210,8 @@ def status(queue_path: str | Path) -> dict[str, Any]:
         "page_count": state["page_count"],
         "max_in_flight": state["max_in_flight"],
         "counts": counts,
+        "terminal_success_count": counts.get("completed", 0) + counts.get("cached", 0),
+        **phase,
         "attempts": attempts,
         "failure_events": failures,
         "retry_events": sum(1 for event in state.get("events", []) if event.get("event") == "failed" and event.get("retryable")),

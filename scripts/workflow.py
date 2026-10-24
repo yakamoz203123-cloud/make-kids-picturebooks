@@ -19,6 +19,7 @@ from generation_queue import (
     RETRYABLE_STATUSES,
     DEFAULT_MAX_ATTEMPTS,
     _load_queue,
+    _queue_phase_status,
     authorize_generation,
     claim_job,
     init_queue,
@@ -134,6 +135,7 @@ def _resume_summary(
         "max_in_flight": state.get("max_in_flight"),
         "next_action": fields.pop("next_action", None),
     }
+    result.update(_queue_phase_status(state))
     result.update(fields)
     return result
 
