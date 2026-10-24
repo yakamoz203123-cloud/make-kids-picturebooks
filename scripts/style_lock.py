@@ -9,6 +9,8 @@ from typing import Any, Mapping, Sequence
 
 from PIL import Image, UnidentifiedImageError
 
+from asset_hashing import file_hash, matches_file_hash
+
 
 STYLE_PATH = Path(__file__).resolve().parents[1] / "assets" / "style_master.json"
 STYLE_REGISTRY_PATH = Path(__file__).resolve().parents[1] / "assets" / "style-registry.json"
@@ -97,7 +99,7 @@ def _style_reference_candidate(root: Path, relative: str) -> Path | None:
 
 
 def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest().lower()
+    return file_hash(path).lower()
 
 
 def validate_registered_style_selection(
@@ -211,7 +213,7 @@ def validate_registered_style_selection(
                 or any(
                     not isinstance(relative_path, str)
                     or not (bundle / relative_path).is_file()
-                    or _sha256(bundle / relative_path) != expected_hash
+                    or not matches_file_hash(bundle / relative_path, expected_hash)
                     for relative_path, expected_hash in files.items()
                 )
                 or expected_receipt_hash != actual_receipt_hash
