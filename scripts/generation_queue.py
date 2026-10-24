@@ -1314,20 +1314,20 @@ def init_queue(
         raise ValueError("max_attempts must be positive")
     book_dir = Path(book_dir).resolve()
     queue_path = Path(queue_path).resolve()
-    existing: dict[str, Any] | None = None
-    if queue_path.exists():
-        existing = _load_queue(queue_path)
-        if Path(existing["book_dir"]).resolve() != book_dir:
-            raise ValueError("existing queue belongs to a different book directory")
-    planned = _plan(book_dir)
-    workflow_gate = _pre_generation_gate(
-        book_dir,
-        planned,
-        allow_standalone_legacy=allow_standalone_legacy,
-        existing_gate=existing.get("workflow_gate") if existing else None,
-    )
-    requires_user_authorization = workflow_gate.get("mode") == "production"
     with _queue_mutation_lock(queue_path):
+        existing: dict[str, Any] | None = None
+        if queue_path.exists():
+            existing = _load_queue(queue_path)
+            if Path(existing["book_dir"]).resolve() != book_dir:
+                raise ValueError("existing queue belongs to a different book directory")
+        planned = _plan(book_dir)
+        workflow_gate = _pre_generation_gate(
+            book_dir,
+            planned,
+            allow_standalone_legacy=allow_standalone_legacy,
+            existing_gate=existing.get("workflow_gate") if existing else None,
+        )
+        requires_user_authorization = workflow_gate.get("mode") == "production"
         old_by_page = {int(job["page"]): job for job in existing.get("jobs", [])} if existing else {}
         jobs = []
         for fresh in planned["jobs"]:

@@ -59,7 +59,7 @@ Run: `python -m pytest tests/test_workflow_efficiency.py -q`
 
 Expected: all focused tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/project_preflight.py tests/test_workflow_efficiency.py
@@ -96,7 +96,7 @@ Run: `python -m pytest tests/test_workflow_efficiency.py tests/test_generation_q
 
 Expected: all focused and queue tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/generation_queue.py tests/test_workflow_efficiency.py
@@ -134,7 +134,7 @@ Run: `python -m pytest tests/test_workflow_efficiency.py tests/test_request_life
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/generation_queue.py tests/test_workflow_efficiency.py
@@ -146,21 +146,21 @@ git commit -m "perf: preserve unaffected page authorizations"
 **Files:**
 - Modify: `ASSET_CONTRACT_HARDENING_REPORT.md`
 
-- [ ] **Step 1: Run the full Skill test suite**
+- [x] **Step 1: Run the full Skill test suite**
 
 Run: `python -m pytest -q`
 
 Expected: zero failures; record skipped/subtest counts if reported.
 
-- [ ] **Step 2: Run compile and focused smoke checks**
+- [x] **Step 2: Run compile and focused smoke checks**
 
 Run `python -m compileall scripts`, the original windmill packet/story/manifest/strict preflight checks, and a temporary queue init/authorization/claim cycle. Confirm `image_model_calls=0` and no project content writes.
 
-- [ ] **Step 3: Measure the optimized path**
+- [x] **Step 3: Measure the optimized path**
 
 Measure cold queue init, warm queue reinitialization, and page-local reinitialization with wall-clock timings. Compare only like-for-like runs; do not claim image-generation speed improvements from queue-only measurements.
 
-- [ ] **Step 4: Update the Markdown report**
+- [x] **Step 4: Update the Markdown report**
 
 Record the new behavior, measured warm-path savings, fallback conditions, and the fact that concurrency and quality gates were unchanged.
 

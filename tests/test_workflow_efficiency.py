@@ -9,6 +9,8 @@ import pytest
 
 SKILL_DIR = Path(__file__).parents[1]
 SCRIPTS_DIR = SKILL_DIR / "scripts"
+for _module_name in ("generation_queue", "project_preflight"):
+    sys.modules.pop(_module_name, None)
 sys.path.insert(0, str(SCRIPTS_DIR))
 try:
     import generation_queue
@@ -86,6 +88,31 @@ def test_queue_init_passes_one_plan_to_preflight(tmp_path: Path) -> None:
 
     assert state["workflow_gate"]["status"] == "passed"
     assert state["page_count"] == 1
+
+
+def test_queue_init_holds_mutation_lock_while_building_gate(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    book, queue = _production_paths(root)
+    lock_active = False
+    original_gate = generation_queue._pre_generation_gate
+
+    class ProbeLock:
+        def __enter__(self):
+            nonlocal lock_active
+            lock_active = True
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            nonlocal lock_active
+            lock_active = False
+
+    def gate_probe(*args, **kwargs):
+        assert lock_active is True
+        return original_gate(*args, **kwargs)
+
+    with patch.object(generation_queue, "_queue_mutation_lock", return_value=ProbeLock()):
+        with patch.object(generation_queue, "_pre_generation_gate", side_effect=gate_probe):
+            generation_queue.init_queue(book, queue)
 
 
 def test_queue_reinitialization_reuses_valid_preflight_receipt(tmp_path: Path) -> None:
