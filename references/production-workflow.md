@@ -32,6 +32,17 @@
 
 不要让两个文件同时成为同一信息的权威来源。引用可以重复，定义只能有一个负责人。
 
+### 项目包类型和依赖闭包
+
+`project.json.project_profile` 必须区分项目用途：
+
+- `production-ready`：可做 strict 预检、串行逐页生图、单页返工和确定性交付。每个页面声明的 `current_prompt_path`/`prompt_path`、`character_reference_path`、`production_reference_path` 都必须存在并位于当前书籍目录内；研究包、knowledge whitelist 和 story-claim trace 也必须能从项目契约解析。
+- `delivery-only`：只用于已有图片的纯图交付和哈希校验，不承诺可续做，不得初始化生产队列。
+
+没有显式 profile 的历史项目会由预检根据依赖完整性推断，并在回执中标记 `legacy-undeclared` 或 `production-ready`。新项目不要省略 profile。
+
+`project_preflight.py` 的 `production_dependency_closure` 是只读门禁：它不复制文件、不创建队列、不调用图片模型，只报告 `missing`、`outside_book`、`warnings` 和实际解析证据。缺少生产依赖时，先修复项目包或明确降级为 `delivery-only`，不能靠跳过 strict 继续生图。
+
 ## 1. 新项目：一次完成规划
 
 这是一次规划，不在逐页生产阶段重复整本研究、故事编辑或全书审计。

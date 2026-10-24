@@ -27,6 +27,7 @@ from build_pure_image_delivery import (
 )
 from continuity_contract import validate_continuity_invariants
 from generation_queue import _plan
+from project_bundle import validate_production_dependencies
 from validate_page_manifest import validate_page_manifest
 
 
@@ -452,6 +453,7 @@ def preflight_project(
         "warnings": [],
         "blockers": [],
         "evidence": [],
+        "production_dependency_closure": None,
         "fix_advice": [],
         "write_operations": 0,
         "image_model_calls": 0,
@@ -575,6 +577,37 @@ def preflight_project(
     report["evidence"].extend(path_evidence)
     if not path_blocks:
         passed("project_path_safety")
+
+    dependency_closure = validate_production_dependencies(
+        book_dir=book_dir,
+        content_dir=content_dir,
+        root=root,
+        pages=manifest_pages,
+        manifest=manifest,
+        project_data=project_data,
+        phase=phase,
+    )
+    report["production_dependency_closure"] = dependency_closure
+    report["warnings"].extend(dependency_closure["warnings"])
+    report["evidence"].append({"kind": "production_dependency_closure", **dependency_closure})
+    for item in dependency_closure["missing"]:
+        if item.get("page") is None:
+            report["blockers"].append(f"PRODUCTION_DEPENDENCY_MISSING:scope={item['scope']}:field={item['field']}")
+        else:
+            report["blockers"].append(f"PRODUCTION_DEPENDENCY_MISSING:page={item['page']}:field={item['field']}")
+    for item in dependency_closure["outside_book"]:
+        if item.get("page") is None:
+            report["blockers"].append(f"PRODUCTION_DEPENDENCY_OUTSIDE_BOOK:scope={item['scope']}:field={item['field']}")
+        else:
+            report["blockers"].append(f"PRODUCTION_DEPENDENCY_OUTSIDE_BOOK:page={item['page']}:field={item['field']}")
+    if dependency_closure["profile"] == "delivery-only" and phase == "pre_generation":
+        report["blockers"].append("PROJECT_PROFILE_NOT_PRODUCTION_READY")
+    if dependency_closure["status"] == "passed" and dependency_closure["profile"] != "delivery-only":
+        passed(
+            "production_dependency_closure",
+            profile=dependency_closure["profile"],
+            required_count=len(dependency_closure["required"]),
+        )
 
     asset_plan_path = content_dir / "asset-binding-plan.json"
     try:

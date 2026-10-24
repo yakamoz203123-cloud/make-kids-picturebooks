@@ -18,6 +18,15 @@
 
 PDF、打印、社媒渲染、历史迁移、发布打包和完整性能统计属于按需或历史兼容分支，不会因脚本存在而自动进入默认流程。
 
+## 项目包类型
+
+`project.json` 使用 `project_profile` 明确项目包用途：
+
+- `production-ready`：包含故事、分镜、页面清单、prompt、角色/画风批准引用、研究追溯和页面依赖，可运行 strict 预检、串行队列和逐页返工。
+- `delivery-only`：只保证已有图片、正文、顺序和交付哈希，可用于 `pure-images` 交付，不得当作可续做的生产项目。
+
+默认新项目使用 `production-ready`。`project_preflight.py --phase pre_generation --mode strict` 会检查页面依赖闭包；缺少 prompt、角色参考或生产参考时会明确阻断，不再只依赖页面清单存在。
+
 ## 本地验证
 
 ```text

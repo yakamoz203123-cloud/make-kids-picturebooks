@@ -142,6 +142,41 @@ def test_pre_generation_allows_missing_images_and_does_not_write_queue(tmp_path:
     assert not list(root.rglob("production-queue.json"))
 
 
+def test_pre_generation_reports_complete_production_dependency_closure(tmp_path: Path) -> None:
+    root = _fixture(tmp_path, with_images=False)
+    result = preflight_project(root, "b01", version="v1", phase="pre_generation", mode="strict")
+    closure = result["production_dependency_closure"]
+    assert closure["status"] == "passed"
+    assert closure["profile"] == "production-ready"
+    assert closure["missing"] == []
+    assert closure["outside_book"] == []
+
+
+def test_pre_generation_blocks_missing_production_dependencies_with_field_context(tmp_path: Path) -> None:
+    root = _fixture(tmp_path, with_images=False)
+    book = root / "books" / "b01" / "v1" / "content"
+    (book / "prompts" / "page-01.md").unlink()
+    (book / "characters" / "core-v1.3" / "reference" / "ref.png").unlink()
+
+    result = preflight_project(root, "b01", version="v1", phase="pre_generation", mode="strict")
+    closure = result["production_dependency_closure"]
+    assert closure["status"] == "blocked"
+    assert any("PRODUCTION_DEPENDENCY_MISSING:page=1:field=current_prompt_path" in item for item in result["blockers"])
+    assert any("PRODUCTION_DEPENDENCY_MISSING:page=1:field=character_reference_path" in item for item in result["blockers"])
+
+
+def test_delivery_only_profile_is_not_production_ready(tmp_path: Path) -> None:
+    root = _fixture(tmp_path, with_images=False)
+    project_path = root / "project.json"
+    project = json.loads(project_path.read_text(encoding="utf-8"))
+    project["project_profile"] = "delivery-only"
+    _write_json(project_path, project)
+
+    result = preflight_project(root, "b01", version="v1", phase="pre_generation", mode="strict")
+    assert result["production_dependency_closure"]["profile"] == "delivery-only"
+    assert "PROJECT_PROFILE_NOT_PRODUCTION_READY" in result["blockers"]
+
+
 def test_pre_delivery_blocks_missing_formal_image(tmp_path: Path) -> None:
     root = _fixture(tmp_path, with_images=False)
     result = preflight_project(root, "b01", version="v1", phase="pre_delivery")
