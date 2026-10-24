@@ -18,6 +18,19 @@
 
 PDF、打印、社媒渲染、历史迁移、发布打包和完整性能统计属于按需或历史兼容分支，不会因脚本存在而自动进入默认流程。
 
+## 日常统一入口
+
+默认操作可以压缩为三个动作：
+
+```text
+python scripts/workflow.py doctor /absolute/project b01 --version v1
+python scripts/workflow.py resume /absolute/project b01 --version v1
+python scripts/workflow.py resume /absolute/project b01 --version v1 --approval "用户批准继续生成下一页" --max-calls 1
+python scripts/workflow.py deliver /absolute/project b01 /absolute/project/books/b01/v1/delivery/pure-image-delivery-v1 --version v1
+```
+
+`doctor` 是只读项目检查；`resume` 复用预检和队列，默认单页串行，没有授权只提示、不领取，运行中的页面会等待；`deliver` 委托最终交付门禁。底层脚本仍保留，用于详细诊断、生命周期处理和历史兼容，不会被统一入口绕过。
+
 ## 项目包类型
 
 `project.json` 使用 `project_profile` 明确项目包用途：

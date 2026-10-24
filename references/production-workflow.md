@@ -15,6 +15,19 @@
 
 默认不进入 PDF、打印、社媒渲染、历史迁移、发布打包或完整性能统计；这些是按需分支或历史兼容分支。
 
+## 0.5 用户统一入口
+
+日常生产只需要记住三个动作：
+
+```bash
+python3 "$SKILL_DIR/scripts/workflow.py" doctor /absolute/project b01 --version v1
+python3 "$SKILL_DIR/scripts/workflow.py" resume /absolute/project b01 --version v1
+python3 "$SKILL_DIR/scripts/workflow.py" resume /absolute/project b01 --version v1 --approval "用户批准继续生成下一页" --max-calls 1
+python3 "$SKILL_DIR/scripts/workflow.py" deliver /absolute/project b01 /absolute/project/books/b01/v1/delivery/pure-image-delivery-v1 --version v1
+```
+
+`doctor` 只读执行现有 `pre_generation/strict`；`resume` 复用现有预检回执和队列，默认单页串行，并且一次最多领取一页；没有明确授权时安全停止并返回 `authorization_required`。页面正在运行时返回 `waiting`，不会把运行状态擅自解释为中断；未知请求、失败页和其他阻断继续交给底层生命周期命令处理。`deliver` 只是转交现有 `release_pure_image_delivery.py`，不新增发布判定。需要查看完整 evidence 或处理历史兼容项目时，再使用下面的底层命令。
+
 ## 0. 输入契约和唯一职责
 
 开始前只确认来源、目标年龄、输出模式、隐私范围、已批准角色/画风和本次授权。已有项目先读取摘要，不默认重新扫描整个项目。

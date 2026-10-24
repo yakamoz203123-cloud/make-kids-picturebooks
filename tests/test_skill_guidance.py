@@ -334,6 +334,7 @@ class SkillGuidanceTests(unittest.TestCase):
 
     def test_default_workflow_dependencies_exist_are_tracked_and_importable(self) -> None:
         required_paths = (
+            "scripts/workflow.py",
             "scripts/build_pure_image_delivery.py",
             "scripts/production_timing.py",
             "scripts/render_social_book.py",
@@ -370,6 +371,7 @@ class SkillGuidanceTests(unittest.TestCase):
         sys.path.insert(0, str(scripts_dir))
         try:
             for module_name in (
+                "workflow",
                 "build_pure_image_delivery",
                 "production_timing",
                 "render_social_book",
@@ -381,6 +383,28 @@ class SkillGuidanceTests(unittest.TestCase):
                     self.assertIsNotNone(importlib.import_module(module_name))
         finally:
             sys.path.remove(str(scripts_dir))
+
+    def test_unified_workflow_entry_preserves_gate_boundaries(self) -> None:
+        combined = "\n".join(
+            read(path)
+            for path in (
+                "SKILL.md",
+                "references/production-workflow.md",
+                "README.md",
+            )
+        )
+        for term in (
+            "workflow.py",
+            "doctor",
+            "resume",
+            "deliver",
+            "authorization_required",
+            "pre_delivery/strict",
+            "不会自动批准",
+            "运行中的页面",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, combined)
 
     def test_queue_init_is_documented_as_structural_not_content_gate(self) -> None:
         workflow = read("references/production-workflow.md")

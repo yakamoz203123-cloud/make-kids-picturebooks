@@ -36,6 +36,19 @@ description: Use when the user provides an adult knowledge book or chapter, or o
 
 `SKILL.md` 负责入口、边界和路由；[references/production-workflow.md](references/production-workflow.md) 是默认生产流程的唯一详细来源。其他 reference 只在当前分支需要时读取。
 
+## 统一操作入口
+
+为了减少需要记忆的内部命令，默认优先使用 `scripts/workflow.py` 的三个动作；它只是编排层，不复制或绕过底层门禁：
+
+```text
+python3 "$SKILL_DIR/scripts/workflow.py" doctor /absolute/project b01 --version v1
+python3 "$SKILL_DIR/scripts/workflow.py" resume /absolute/project b01 --version v1
+python3 "$SKILL_DIR/scripts/workflow.py" resume /absolute/project b01 --version v1 --approval "用户批准继续生成下一页" --max-calls 1
+python3 "$SKILL_DIR/scripts/workflow.py" deliver /absolute/project b01 /absolute/project/books/b01/v1/delivery/pure-image-delivery-v1 --version v1
+```
+
+`doctor` 只读检查项目；`resume` 初始化或复用队列并最多领取一页，没有明确授权时只返回 `authorization_required`，不会自动批准；`deliver` 委托现有 `pre_delivery/strict` 和人工审核边界。遇到运行中的页面、未知请求、失败页或发布阻断时，入口会停止并给出下一步，不自动恢复或重试。需要详细证据、历史兼容或诊断时，仍可直接使用各底层脚本。
+
 ## 不变的质量和安全契约
 
 - 默认新输出使用 `output_mode: pure-images`、`pure-image-delivery-v1`、`xiaohongshu-feed-3x4` 基础画布契约和原生 `1080×1440`；这里的 profile 只规定源图比例与画布，不表示默认渲染社媒文字。
