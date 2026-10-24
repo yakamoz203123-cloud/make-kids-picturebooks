@@ -303,6 +303,7 @@ def _content_gate_check(
     manifest: Mapping[str, Any],
     project_data: Mapping[str, Any],
     layout: str,
+    production_profile: str | None,
 ) -> tuple[list[str], list[str], list[dict[str, Any]]]:
     """Run declared story and page-manifest content gates without writing files."""
 
@@ -321,6 +322,33 @@ def _content_gate_check(
         content_dir=content_dir,
         root=root,
     )
+    pages = manifest.get("pages")
+    has_page_science = isinstance(pages, list) and any(
+        isinstance(page, Mapping)
+        and (isinstance(page.get("knowledge_claims"), list) or isinstance(page.get("science_visual_checks"), list))
+        for page in pages
+    )
+    source = project_data.get("source")
+    has_research_intent = (
+        _nonempty(manifest.get("research_packet_path"))
+        or (isinstance(source, Mapping) and _nonempty(source.get("path")))
+        or has_page_science
+    )
+    if production_profile == "production-ready" and has_research_intent and (
+        not _nonempty(manifest.get("knowledge_whitelist_path"))
+        or not _nonempty(manifest.get("story_claim_trace_path"))
+    ):
+        blockers.append("CONTENT_GATE:input:research_references_undeclared")
+        evidence.append(
+            {
+                "kind": "content_gate",
+                "source": "input",
+                "status": "blocked",
+                "error_codes": ["research_references_undeclared"],
+                "errors": ["Research 白名单和 story trace 必须在 page-manifest.json 中声明"],
+            }
+        )
+        return blockers, warnings, evidence
     if not whitelist_path or not trace_path or not whitelist_path.is_file() or not trace_path.is_file():
         return blockers, warnings, evidence
 
@@ -709,6 +737,7 @@ def preflight_project(
         manifest=manifest,
         project_data=project_data,
         layout=layout,
+        production_profile=dependency_closure.get("profile"),
     )
     report["blockers"].extend(content_blocks)
     report["warnings"].extend(content_warnings)

@@ -179,6 +179,20 @@ def test_pre_generation_blocks_missing_manifest_content_gate(tmp_path: Path) -> 
     assert "CONTENT_GATE:manifest:missing_storyboard_science_review" in result["blockers"]
 
 
+def test_pre_generation_blocks_undeclared_research_evidence(tmp_path: Path) -> None:
+    root = _fixture(tmp_path, with_images=False)
+    manifest_path = root / "books" / "b01" / "v1" / "content" / "page-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest.pop("knowledge_whitelist_path")
+    manifest.pop("story_claim_trace_path")
+    _write_json(manifest_path, manifest)
+
+    result = preflight_project(root, "b01", version="v1", phase="pre_generation", mode="strict")
+
+    assert result["status"] == "blocked"
+    assert "CONTENT_GATE:input:research_references_undeclared" in result["blockers"]
+
+
 def test_pre_generation_blocks_missing_production_dependencies_with_field_context(tmp_path: Path) -> None:
     root = _fixture(tmp_path, with_images=False)
     book = root / "books" / "b01" / "v1" / "content"

@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import os
+import shutil
 import sys
 import time
 import unittest
@@ -135,6 +136,18 @@ class GenerationQueueTests(unittest.TestCase):
         self.assertTrue(all(job["status"] == "pending" for job in state["jobs"]))
         self.assertEqual(len({job["output_path"] for job in state["jobs"]}), 3)
         self.assertTrue(all(job["request_fingerprint"] for job in state["jobs"]))
+
+    def test_init_accepts_content_layout_and_keeps_book_relative_inputs(self):
+        content = self.book / "content"
+        content.mkdir()
+        for name in ("story.md", "page-manifest.json", "storyboard.json", "layout.json"):
+            shutil.move(str(self.book / name), str(content / name))
+
+        state = self._init()
+
+        self.assertEqual(state["page_count"], 3)
+        self.assertTrue(all(job["status"] == "pending" for job in state["jobs"]))
+        self.assertTrue(all(job["output_path"].startswith("images/") for job in state["jobs"]))
 
     def test_init_rejects_absolute_and_parent_input_paths(self):
         outside_prompt = self.root / "outside-prompt.md"

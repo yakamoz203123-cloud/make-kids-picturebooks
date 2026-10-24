@@ -23,6 +23,7 @@ from typing import Any
 
 from PIL import Image
 
+from build_pure_image_delivery import _resolve_content_layout
 from page_production import assemble_page_task
 from page_versions import IMAGE_DEPENDENCY_FIELDS, OPTIONAL_IMAGE_DEPENDENCY_FIELDS, image_dependency_fingerprint
 
@@ -636,7 +637,11 @@ def _pages(document: dict[str, Any], name: str) -> list[dict[str, Any]]:
 
 def _plan(book_dir: Path) -> dict[str, Any]:
     book_dir = book_dir.resolve()
-    story_path = book_dir / "story.md"
+    content_dir, _layout = _resolve_content_layout(book_dir)
+    story_path = next(
+        (candidate for candidate in (content_dir / "story.md", book_dir / "story.md") if candidate.is_file()),
+        content_dir / "story.md",
+    )
     if not story_path.exists():
         raise ValueError("complete story is required before image generation: story.md")
     story_text = story_path.read_text(encoding="utf-8")
@@ -644,9 +649,9 @@ def _plan(book_dir: Path) -> dict[str, Any]:
         raise ValueError("complete story is required before image generation: story.md")
     story_sha256 = _file_hash(story_path)
 
-    manifest = _read_json(book_dir / "page-manifest.json")
-    storyboard = _read_json(book_dir / "storyboard.json")
-    layout = _read_json(book_dir / "layout.json")
+    manifest = _read_json(content_dir / "page-manifest.json")
+    storyboard = _read_json(content_dir / "storyboard.json")
+    layout = _read_json(content_dir / "layout.json")
     manifest_pages = _pages(manifest, "page-manifest.json")
     storyboard_pages = _pages(storyboard, "storyboard.json")
     layout_pages = _pages(layout, "layout.json")

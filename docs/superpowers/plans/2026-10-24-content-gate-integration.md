@@ -23,6 +23,7 @@
 - Manifest 缺少 `science_visual_consistency`：必须阻断；测试：缺字段返回对应错误码。
 - Manifest 页面缺少 claim 的视觉检查：必须阻断；测试：复用现有 validator 负例。
 - 项目声明 Research 路径但文件不可用：由既有 research 检查阻断；测试：预检 fixture 保持原行为。
+- `production-ready` 项目存在 Research 意图或页面科学证据但未声明白名单/trace：必须由预检直接阻断；测试：新增未声明引用回归测试。
 - 没有 Research 引用的历史项目：不新增阻断；测试：旧 fixture 继续通过已有工程检查。
 - 审核清单不得自行得出通过结论：测试：只反映预检 blocker。
 
@@ -67,3 +68,13 @@
 - [ ] 运行完整 Skill 测试、编译检查和 `git diff --check`。
 - [ ] 确认原始项目仍缺少 prompts/角色引用且没有修复产物。
 - [ ] 同步变更到本地 Skill，提交实现与文档。
+
+### Task 5: 内容布局与队列入口收敛
+
+**Files:**
+- Modify: `scripts/generation_queue.py`
+- Test: `tests/test_generation_queue.py`
+
+- [x] 先写 content 布局队列初始化回归测试，并确认旧入口失败。
+- [x] 让队列计划复用统一内容布局解析器，保持页面输入路径相对版本根目录。
+- [x] 在隔离风车副本上验证内容闸门、严格预检和队列初始化。

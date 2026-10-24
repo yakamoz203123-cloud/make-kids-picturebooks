@@ -53,6 +53,12 @@
 - `page-manifest.json` 增加唯一的全书级 `science_visual_consistency`；第 9 页补齐 `claim-03`、`claim-05` 的视觉检查。
 - `storyboard.json` 未复制页面科学证据，保持故事规划职责。
 
+### 3.5 Research 引用与 content 布局收敛
+
+- `production-ready` 项目只要存在 Research 意图或页面科学证据，就必须在 `page-manifest.json` 声明 `knowledge_whitelist_path` 和 `story_claim_trace_path`；缺失时由严格预检直接阻断，不再静默跳过内容闸门。
+- 生成队列现在复用统一的 `content/` 布局解析，读取 `content/story.md`、`content/page-manifest.json`、`content/storyboard.json` 和 `content/layout.json`，同时继续按版本根目录解析页面提示词和角色引用，避免复制文件或增加中间适配层。
+- 内容布局中的重复 manifest 仍被视为重复权威；隔离测试副本只保留规范的 `content/page-manifest.json`，没有放宽冲突检查。
+
 ## 4. 项目修复结果
 
 修复对象：
@@ -76,11 +82,21 @@
 ### Skill 回归测试
 
 ```text
-70 passed, 1 skipped, 12 subtests passed
+72 passed, 1 skipped, 12 subtests passed
 29 guidance tests OK
 7 release guard tests OK
 compileall passed
 git diff --check passed
+```
+
+本轮新增的 content 布局队列回归测试先按预期复现旧入口失败，再在最小修复后通过；风车隔离副本的专项链路结果为：
+
+```text
+validate-story: passed, errors=0
+validate-manifest: passed, errors=0
+pre_generation strict: passed, blockers=0, warnings=2
+generation queue init: passed, page_count=9, model_calls=0
+generation queue status: pending=9, running=0, retryable=0, failed=0, completed=0, cached=0
 ```
 
 完整 pytest 还执行了仓库中全部测试，结果为 `465 passed, 2 skipped, 14 failed, 431 subtests passed`。14 个失败集中在既有角色资产 v1.2 批准状态、旧资产包内容和包内哈希，与本次内容闸门改动的文件和功能无关；本阶段专项测试全部通过。
@@ -109,6 +125,15 @@ final review checklist: passed, page_issues=0, global_issues=0, warnings=0
 - 仍缺少角色引用文件。
 - 没有出现修复副本的 `review/recovery-candidates` 或正式交付目录。
 - 原项目没有被自动修复或覆盖。
+
+### 风车隔离测试保护验证
+
+测试项目：`D:\宝宝绘本制作\reports\windmill-story-test-20261024\project`
+
+- 原始项目 `D:\宝宝绘本制作\projects\windmill-3-4-v1` 未修改。
+- 隔离副本原先存在版本根目录与 `content/` 两份 manifest；本轮只在隔离副本中去除冗余根副本，保留 `content/` 作为唯一权威。
+- 没有领取任务，没有调用图片模型；新队列全部为 `pending`，仅验证计划和队列状态。
+- 两个审批提示（角色包和样式批准记录不在项目本地）仍保留为 warning，没有被伪装成通过。
 
 ## 6. 未完成事项
 
