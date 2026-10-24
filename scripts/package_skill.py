@@ -8,8 +8,27 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+from asset_hashing import canonical_bytes
 
 EXCLUDED_DIRS = {".git", ".superpowers", "__pycache__"}
+PACKAGE_NAME = "make-kids-picturebooks"
+
+
+def _package_name(root: Path) -> str:
+    """Read the stable package identity from SKILL.md front matter."""
+    lines = (root / "SKILL.md").read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0].strip() != "---":
+        return PACKAGE_NAME
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        key, separator, value = line.partition(":")
+        if separator and key.strip() == "name":
+            name = value.strip().strip("'\"")
+            if name and Path(name).name == name and name not in {".", ".."}:
+                return name
+            raise ValueError("SKILL.md front matter 必须包含安全的 name")
+    return PACKAGE_NAME
 
 
 def _resolved_inside(root: Path, candidate: Path) -> bool:
@@ -49,11 +68,12 @@ def _skill_files(skill_dir: Path) -> list[tuple[str, Path]]:
 
 
 def _digest(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return hashlib.sha256(canonical_bytes(path)).hexdigest()
+
+
+def _archive_value(path: Path) -> bytes | Path:
+    normalized = canonical_bytes(path)
+    return normalized if normalized != path.read_bytes() else path
 
 
 def _publish_archive(output: Path, entries: list[tuple[str, bytes | Path]]) -> None:
@@ -105,12 +125,12 @@ def package_skill(skill_dir: Path, output: Path, version: str) -> dict:
         raise ValueError("技能包输出不能位于技能目录内")
 
     files = _skill_files(root)
-    top = root.name
+    top = _package_name(root)
     entries: list[tuple[str, bytes | Path]] = []
     manifest_files = []
     for relative, source in files:
         archive_path = f"{top}/{relative}"
-        entries.append((archive_path, source))
+        entries.append((archive_path, _archive_value(source)))
         manifest_files.append({"path": archive_path, "sha256": _digest(source)})
     manifest_path = f"{top}/MANIFEST.json"
     entries.append((manifest_path, _manifest_bytes(version, "skill", manifest_files)))
@@ -125,12 +145,12 @@ def package_download_bundle(skill_dir: Path, auxiliary_files: list[Path], output
         raise ValueError("下载包输出不能位于技能目录内")
 
     files = _skill_files(root)
-    top = root.name
+    top = _package_name(root)
     entries: list[tuple[str, bytes | Path]] = []
     manifest_files = []
     for relative, source in files:
         archive_path = f"{top}/{relative}"
-        entries.append((archive_path, source))
+        entries.append((archive_path, _archive_value(source)))
         manifest_files.append({"path": archive_path, "sha256": _digest(source)})
 
     seen_aux: set[str] = set()
@@ -142,7 +162,7 @@ def package_download_bundle(skill_dir: Path, auxiliary_files: list[Path], output
         if not name or name in seen_aux or name in {entry[0] for entry in entries}:
             raise ValueError(f"辅助发布文件名冲突: {name}")
         seen_aux.add(name)
-        entries.append((name, source))
+        entries.append((name, _archive_value(source)))
         manifest_files.append({"path": name, "sha256": _digest(source)})
 
     entries.append(("发布清单.json", _manifest_bytes(version, "download_bundle", manifest_files)))

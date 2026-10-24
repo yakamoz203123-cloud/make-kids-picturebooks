@@ -72,21 +72,21 @@ Run: `python -X utf8 -m pytest tests/test_asset_hashing.py tests/test_asset_prod
 **Interfaces:**
 - `package_skill()` and `package_download_bundle()` use the `name` in `SKILL.md` front matter as archive top-level directory.
 
-- [ ] **Step 1: Run the existing failing package test**
+- [x] **Step 1: Run the existing failing package test**
 
 Run: `python -X utf8 -m pytest tests/test_asset_phase1.py::Phase1AssetTests::test_skill_package_contains_phase1_registries_and_generated_manifest_once -q`
 
 Expected: fail because the worktree folder is `phase1-flow-reduction`.
 
-- [ ] **Step 2: Implement stable package name**
+- [x] **Step 2: Implement stable package name**
 
 Parse the required front matter `name`; reject unsafe or missing names instead of using the parent folder name.
 
-- [ ] **Step 3: Run GREEN**
+- [x] **Step 3: Run GREEN**
 
 Run: `python -X utf8 -m pytest tests/test_asset_phase1.py::Phase1AssetTests::test_skill_package_contains_phase1_registries_and_generated_manifest_once tests/test_skill_package.py -q`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 `git commit -m "fix: stabilize skill package identity"`
 

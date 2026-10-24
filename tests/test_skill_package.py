@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 
 VERSION = "0.11.0-preview"
+PACKAGE_NAME = "make-kids-picturebooks"
 APPROVED_CORE_RECEIPT_SHA256 = "e3b22df86aa1989660895c39061690468dd6663955a576a7772001ea7a337659"
 APPROVED_CORE_MANIFEST_SHA256 = "cbb4669d776e8fc1fcc2eb47ce798ead237885f599321f7366205dfd0747f30b"
 APPROVED_CORE_REFERENCE_SHA256 = "fb16e77d104bc8fb328dab096c4bd83c04245c5310a18a4b6efee404e438af07"
@@ -43,11 +44,11 @@ class SkillPackageTests(unittest.TestCase):
             with zipfile.ZipFile(output) as archive:
                 names = archive.namelist()
                 self.assertTrue(names)
-                self.assertEqual({name.split("/", 1)[0] for name in names}, {skill.name})
+                self.assertEqual({name.split("/", 1)[0] for name in names}, {PACKAGE_NAME})
                 self.assertEqual(sum(name.endswith("/SKILL.md") for name in names), 1)
                 self.assertFalse(any(name.startswith("/") or "/../" in f"/{name}" for name in names))
-                self.assertNotIn(f"{skill.name}/__pycache__/ignored.pyc", names)
-                manifest_name = f"{skill.name}/MANIFEST.json"
+                self.assertNotIn(f"{PACKAGE_NAME}/__pycache__/ignored.pyc", names)
+                manifest_name = f"{PACKAGE_NAME}/MANIFEST.json"
                 manifest = json.loads(archive.read(manifest_name))
                 self.assertEqual(manifest["version"], VERSION)
                 listed = {entry["path"]: entry["sha256"] for entry in manifest["files"]}
@@ -87,7 +88,7 @@ class SkillPackageTests(unittest.TestCase):
                 names = set(archive.namelist())
                 self.assertIn("安装说明.txt", names)
                 self.assertIn("文件校验清单.json", names)
-                self.assertIn(f"{skill.name}/SKILL.md", names)
+                self.assertIn(f"{PACKAGE_NAME}/SKILL.md", names)
                 self.assertNotIn("__pycache__/ignored.pyc", names)
 
             with self.assertRaises(FileExistsError):
@@ -123,19 +124,19 @@ class SkillPackageTests(unittest.TestCase):
             with zipfile.ZipFile(output) as archive:
                 names = set(archive.namelist())
                 required = {
-                    f"{skill.name}/scripts/layout_design.py",
-                    f"{skill.name}/scripts/layout_styles.py",
-                    f"{skill.name}/scripts/render_social.py",
-                    f"{skill.name}/scripts/preflight_image_generation.py",
-                    f"{skill.name}/assets/book-template.json",
-                    f"{skill.name}/assets/education-goal-template.json",
-                    f"{skill.name}/assets/page-manifest-template.json",
-                    f"{skill.name}/references/education-goals.md",
-                    f"{skill.name}/references/social-output.md",
+                    f"{PACKAGE_NAME}/scripts/layout_design.py",
+                    f"{PACKAGE_NAME}/scripts/layout_styles.py",
+                    f"{PACKAGE_NAME}/scripts/render_social.py",
+                    f"{PACKAGE_NAME}/scripts/preflight_image_generation.py",
+                    f"{PACKAGE_NAME}/assets/book-template.json",
+                    f"{PACKAGE_NAME}/assets/education-goal-template.json",
+                    f"{PACKAGE_NAME}/assets/page-manifest-template.json",
+                    f"{PACKAGE_NAME}/references/education-goals.md",
+                    f"{PACKAGE_NAME}/references/social-output.md",
                 }
                 self.assertTrue(required <= names)
                 self.assertFalse(any("/source/" in name or "/exports/" in name for name in names))
-                public_core_prefix = f"{skill.name}/assets/characters/core-v1.2/"
+                public_core_prefix = f"{PACKAGE_NAME}/assets/characters/core-v1.2/"
                 character_paths = [
                     name for name in names if f"/assets/characters/core-v1.2/" in name
                 ]
@@ -167,10 +168,10 @@ class SkillPackageTests(unittest.TestCase):
                     name for name in names if f"/assets/characters/core-v1.3/" in name
                 ]
                 self.assertTrue(staged_paths)
-                manifest = json.loads(archive.read(f"{skill.name}/MANIFEST.json"))
+                manifest = json.loads(archive.read(f"{PACKAGE_NAME}/MANIFEST.json"))
                 self.assertEqual(manifest["version"], VERSION)
                 listed = {entry["path"] for entry in manifest["files"]}
-                self.assertEqual(listed, names - {f"{skill.name}/MANIFEST.json"})
+                self.assertEqual(listed, names - {f"{PACKAGE_NAME}/MANIFEST.json"})
 
     def test_aesthetic_layout_fixture_is_multi_page_multi_style_and_social_ready(self):
         repository = Path(__file__).resolve().parents[1]
