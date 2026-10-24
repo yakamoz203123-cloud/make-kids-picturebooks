@@ -1,3 +1,5 @@
+import copy
+import json
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -96,3 +98,134 @@ def test_queue_reinitialization_reuses_valid_preflight_receipt(tmp_path: Path) -
 
     assert second["workflow_gate"] == first["workflow_gate"]
     assert second["preflight_receipt"] == first["preflight_receipt"]
+
+
+def test_authorization_records_page_request_fingerprints(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    book, queue = _production_paths(root)
+    state = generation_queue.init_queue(book, queue)
+
+    authorization = generation_queue.authorize_generation(
+        queue,
+        approval="测试授权",
+        max_calls=1,
+    )
+
+    assert authorization["page_fingerprints"] == {
+        "1": state["jobs"][0]["request_fingerprint"],
+    }
+
+
+def test_reconcile_page_scoped_authorization_keeps_only_unchanged_pages() -> None:
+    authorizations = [
+        {
+            "authorization_id": "auth-1",
+            "max_calls": 2,
+            "used_calls": 0,
+            "page_fingerprints": {"1": "old-page-1", "2": "same-page-2"},
+        }
+    ]
+    jobs = [
+        {"page": 1, "request_fingerprint": "new-page-1"},
+        {"page": 2, "request_fingerprint": "same-page-2"},
+    ]
+
+    reconciled = generation_queue._reconcile_generation_authorizations(
+        authorizations,
+        jobs,
+        plan_changed=True,
+        global_input_changed=False,
+    )
+
+    assert reconciled[0]["page_fingerprints"] == {"2": "same-page-2"}
+
+
+def test_global_input_change_clears_page_scoped_authorization() -> None:
+    authorizations = [
+        {
+            "authorization_id": "auth-1",
+            "max_calls": 2,
+            "used_calls": 0,
+            "page_fingerprints": {"1": "same-page-1"},
+        }
+    ]
+
+    assert generation_queue._reconcile_generation_authorizations(
+        authorizations,
+        [{"page": 1, "request_fingerprint": "same-page-1"}],
+        plan_changed=True,
+        global_input_changed=True,
+    ) == []
+
+
+def test_page_scoped_authorization_rejects_changed_page() -> None:
+    state = {
+        "requires_user_authorization": True,
+        "generation_authorizations": [
+            {
+                "authorization_id": "auth-1",
+                "max_calls": 2,
+                "used_calls": 0,
+                "page_fingerprints": {"1": "old-page-1", "2": "same-page-2"},
+            }
+        ],
+        "jobs": [
+            {"page": 1, "request_fingerprint": "new-page-1"},
+            {"page": 2, "request_fingerprint": "same-page-2"},
+        ],
+    }
+
+    with pytest.raises(PermissionError, match="stale"):
+        generation_queue._generation_authorization(state, "auth-1", 1, pages=[1])
+
+    assert generation_queue._generation_authorization(state, "auth-1", 1, pages=[2])["authorization_id"] == "auth-1"
+
+
+def test_queue_reinitialization_preserves_unaffected_page_authorization(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    book, queue = _production_paths(root)
+    content = book / "content"
+    prompt_two = content / "prompts" / "page-02.md"
+    prompt_two.write_text("第二页提示词\n", encoding="utf-8")
+
+    for filename in ("page-manifest.json", "storyboard.json"):
+        path = content / filename
+        document = json.loads(path.read_text(encoding="utf-8"))
+        page_two = copy.deepcopy(document["pages"][0])
+        page_two["page"] = 2
+        page_two["page_id"] = "PAGE-02"
+        page_two["page_version"] = "PAGE-02-v1"
+        page_two["text"] = "小熊继续观察第二页。"
+        page_two["current_prompt_path"] = "prompts/page-02.md"
+        page_two["previous_page_state"] = {"state_id": "page_two", "summary": "进入第二页。"}
+        page_two["current_page_entry"] = {"state_id": "page_two", "summary": "小熊继续观察。"}
+        page_two["next_page_hook"] = {"state_id": "story_end", "summary": "故事结束。"}
+        document["pages"][0]["next_page_hook"] = {"state_id": "page_two", "summary": "进入第二页。"}
+        document["pages"].append(page_two)
+        path.write_text(json.dumps(document, ensure_ascii=False), encoding="utf-8")
+
+    layout_path = content / "layout.json"
+    layout = json.loads(layout_path.read_text(encoding="utf-8"))
+    layout["pages"].append({"page": 2, "style_version": "v0.1"})
+    layout_path.write_text(json.dumps(layout, ensure_ascii=False), encoding="utf-8")
+    page_text_path = content / "page-text.json"
+    page_text = json.loads(page_text_path.read_text(encoding="utf-8"))
+    page_text["pages"].append({"page": 2, "text": "小熊继续观察第二页。"})
+    page_text_path.write_text(json.dumps(page_text, ensure_ascii=False), encoding="utf-8")
+
+    first = generation_queue.init_queue(book, queue)
+    authorization = generation_queue.authorize_generation(queue, approval="测试授权", max_calls=2)
+
+    manifest_path = content / "page-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["pages"][1]["page_version"] = "PAGE-02-v2"
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+
+    second = generation_queue.init_queue(book, queue)
+    preserved = second["generation_authorizations"][0]
+    assert preserved["authorization_id"] == authorization["authorization_id"]
+    assert preserved["page_fingerprints"] == {"1": first["jobs"][0]["request_fingerprint"]}
+
+    generation_queue.claim_job(queue, 1, authorization_id=authorization["authorization_id"])
+    with pytest.raises(PermissionError, match="stale"):
+        generation_queue.claim_job(queue, 2, authorization_id=authorization["authorization_id"])

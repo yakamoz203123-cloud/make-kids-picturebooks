@@ -114,21 +114,21 @@ git commit -m "perf: reuse valid preflight receipts in queue init"
 - `_generation_authorization` accepts the claimed page list and rejects a page whose current request fingerprint differs from the authorization snapshot.
 - Reinitialization reconciles scoped authorizations against fresh job request fingerprints; global input changes clear all authorization.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add tests proving an unchanged page keeps authorization after a different page changes, the changed page is rejected until reauthorized, global input changes clear authorization, and legacy authorization records retain the old safe behavior.
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run: `python -m pytest tests/test_workflow_efficiency.py -q`
 
 Expected: FAIL because authorization records have no page scope and plan changes clear all authorization.
 
-- [ ] **Step 3: Implement page fingerprint binding and reconciliation**
+- [x] **Step 3: Implement page fingerprint binding and reconciliation**
 
 Record current job request fingerprints at authorization time. On queue reinitialization, preserve only matching page entries when the change is page-scoped; clear all entries when the global input fingerprint changes or when an authorization has no page scope. Validate page scope before consuming an authorization in both single and batch claim paths.
 
-- [ ] **Step 4: Run focused and lifecycle tests**
+- [x] **Step 4: Run focused and lifecycle tests**
 
 Run: `python -m pytest tests/test_workflow_efficiency.py tests/test_request_lifecycle.py tests/test_generation_queue.py -q`
 

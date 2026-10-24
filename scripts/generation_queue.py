@@ -1235,6 +1235,45 @@ def _pre_generation_gate(
     }
 
 
+def _reconcile_generation_authorizations(
+    authorizations: list[dict[str, Any]],
+    jobs: list[dict[str, Any]],
+    *,
+    plan_changed: bool,
+    global_input_changed: bool,
+) -> list[dict[str, Any]]:
+    """Preserve only page-scoped authorizations whose request still matches."""
+    if not authorizations:
+        return []
+    if not plan_changed:
+        return copy.deepcopy(authorizations)
+    if global_input_changed:
+        return []
+
+    current_fingerprints = {
+        str(job.get("page")): job.get("request_fingerprint")
+        for job in jobs
+        if isinstance(job, dict) and job.get("page") is not None
+    }
+    reconciled: list[dict[str, Any]] = []
+    for authorization in authorizations:
+        page_fingerprints = authorization.get("page_fingerprints")
+        if not isinstance(page_fingerprints, dict):
+            # Old records have no page scope; clearing them is the safe legacy behavior.
+            continue
+        kept = {
+            str(page): fingerprint
+            for page, fingerprint in page_fingerprints.items()
+            if current_fingerprints.get(str(page)) == fingerprint
+        }
+        if not kept:
+            continue
+        preserved = copy.deepcopy(authorization)
+        preserved["page_fingerprints"] = kept
+        reconciled.append(preserved)
+    return reconciled
+
+
 def _assert_production_gate_receipt(state: dict[str, Any]) -> None:
     """Prevent pre-gate legacy queues from reaching an irreversible claim."""
     book_dir = Path(state["book_dir"]).resolve()
@@ -1353,10 +1392,19 @@ def init_queue(
             jobs.append(fresh)
 
         plan_changed = bool(existing and existing.get("plan_fingerprint") != planned["plan_fingerprint"])
-        generation_authorizations = (
-            []
-            if plan_changed
-            else copy.deepcopy(existing.get("generation_authorizations", [])) if existing else []
+        old_gate = existing.get("workflow_gate") if existing else None
+        global_input_changed = bool(
+            existing
+            and (
+                not isinstance(old_gate, Mapping)
+                or old_gate.get("global_input_fingerprint") != workflow_gate.get("global_input_fingerprint")
+            )
+        )
+        generation_authorizations = _reconcile_generation_authorizations(
+            existing.get("generation_authorizations", []) if existing else [],
+            jobs,
+            plan_changed=plan_changed,
+            global_input_changed=global_input_changed,
         )
         state = {
             "schema_version": SCHEMA_VERSION,
@@ -1422,6 +1470,11 @@ def authorize_generation(
             "approved_at": _now(),
             "max_calls": max_calls,
             "used_calls": 0,
+            "page_fingerprints": {
+                str(job["page"]): job.get("request_fingerprint")
+                for job in state.get("jobs", [])
+                if isinstance(job, dict) and job.get("page") is not None
+            },
         }
         state.setdefault("generation_authorizations", []).append(authorization)
         _append_event(state, "generation_authorized", **authorization)
@@ -1433,6 +1486,8 @@ def _generation_authorization(
     state: dict[str, Any],
     authorization_id: str | None,
     calls: int,
+    *,
+    pages: list[int] | None = None,
 ) -> dict[str, Any] | None:
     if not state.get("requires_user_authorization", False):
         return None
@@ -1448,6 +1503,12 @@ def _generation_authorization(
     available = int(authorization.get("max_calls", 0)) - int(authorization.get("used_calls", 0))
     if available < calls:
         raise PermissionError("generation authorization has already been used or has insufficient calls")
+    if pages is not None and isinstance(authorization.get("page_fingerprints"), dict):
+        for page in pages:
+            job = _job(state, int(page))
+            expected = authorization["page_fingerprints"].get(str(int(page)))
+            if expected != job.get("request_fingerprint"):
+                raise PermissionError(f"generation authorization is stale for page {int(page)}")
     return authorization
 
 
@@ -1527,7 +1588,7 @@ def claim_job(
         running = sum(1 for item in state["jobs"] if item["status"] in ACTIVE_STATUSES)
         if running >= int(state["max_in_flight"]):
             raise RuntimeError("max_in_flight reached; complete or fail a running page first")
-        _generation_authorization(state, authorization_id, 1)
+        _generation_authorization(state, authorization_id, 1, pages=[int(page)])
         result = _claim_job_state(
             state,
             job,
@@ -1569,7 +1630,7 @@ def claim_batch(
         for job in jobs:
             if _current_request(state, job) and _current_request(state, job).get("terminal_state") in {"timed_out", "pending_unknown"}:
                 raise RuntimeError(f"page {job['page']} has an unresolved unknown request; recovery authorization is required")
-        _generation_authorization(state, authorization_id, len(jobs))
+        _generation_authorization(state, authorization_id, len(jobs), pages=normalized)
         claimed_jobs = [
             _claim_job_state(
                 state,
