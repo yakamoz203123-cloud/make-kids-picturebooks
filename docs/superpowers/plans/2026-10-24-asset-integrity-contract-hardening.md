@@ -101,26 +101,26 @@ Run: `python -X utf8 -m pytest tests/test_asset_phase1.py::Phase1AssetTests::tes
 **Interfaces:**
 - Documentation and tests express the existing registry contract: v1.2 is default, v1.3 is released only when explicitly selected by a compatible style/page.
 
-- [ ] **Step 1: Write/update failing contract assertions**
+- [x] **Step 1: Write/update failing contract assertions**
   - v1.2 remains default.
   - v1.3 manifest status is `released` and `production_enabled` is `true`.
   - documentation names both the default and explicit alternative.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
-Run: `python -X utf8 -m pytest tests/test_phase2e_asset_versioning.py::Phase2EAssetVersioningTests::test_v12_is_still_the_default_and_v13_is_not_production_enabled tests/test_character_assets_v12.py::CharacterAssetV12Tests::test_skill_and_readme_route_to_the_bundle -q`
+Run: `python -X utf8 -m pytest tests/test_phase2e_asset_versioning.py::Phase2EAssetVersioningTests::test_v12_is_still_the_default_and_v13_is_explicitly_released tests/test_character_assets_v12.py::CharacterAssetV12Tests::test_skill_and_readme_route_to_the_bundle -q`
 
 Expected: fail on the stale v1.3 state and missing explicit version documentation.
 
-- [ ] **Step 3: Update only the stale contract assertions and guidance**
+- [x] **Step 3: Update only the stale contract assertions and guidance**
 
 Do not change default resolver behavior or promote v1.3 globally.
 
-- [ ] **Step 4: Run GREEN**
+- [x] **Step 4: Run GREEN**
 
 Run: `python -X utf8 -m pytest tests/test_phase2e_asset_versioning.py tests/test_character_assets_v12.py -q`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 `git commit -m "docs: align asset version contract"`
 
@@ -135,25 +135,25 @@ Run: `python -X utf8 -m pytest tests/test_phase2e_asset_versioning.py tests/test
 **Interfaces:**
 - CLI `init` accepts `--standalone-legacy`; a missing project contract without that flag returns a clear non-zero error. Existing low-level Python API compatibility remains unchanged in this phase.
 
-- [ ] **Step 1: Write failing CLI test**
+- [x] **Step 1: Write failing CLI test**
   - A valid no-project fixture is rejected by CLI init without the flag.
   - The same fixture succeeds with `--standalone-legacy`.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `python -X utf8 -m pytest tests/test_generation_queue.py -q`
 
 Expected: the new CLI boundary assertion fails before the flag exists.
 
-- [ ] **Step 3: Implement CLI-only explicit legacy switch**
+- [x] **Step 3: Implement CLI-only explicit legacy switch**
 
 Pass an explicit internal allowance from the CLI to `init_queue`; retain direct API behavior so historical unit fixtures do not require broad rewrites.
 
-- [ ] **Step 4: Run GREEN**
+- [x] **Step 4: Run GREEN**
 
 Run: `python -X utf8 -m pytest tests/test_generation_queue.py tests/test_phase3_preflight_archive.py tests/test_skill_guidance.py -q`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 `git commit -m "fix: make standalone queue mode explicit"`
 

@@ -23,6 +23,9 @@ from prepare_character_references import prepare_page_references
 PHASE2E = Path(r"D:\宝宝绘本制作\projects\character-assets-phase2e-2026-10-19")
 BUNDLE = PHASE2E / "staged-assets" / "core-v1.3"
 V13_MANIFEST = json.loads((BUNDLE / "manifest.json").read_text(encoding="utf-8"))
+RELEASED_V13_MANIFEST = json.loads(
+    ((ROOT / "assets" / "characters" / "core-v1.3") / "manifest.json").read_text(encoding="utf-8")
+)
 TEMPLATE = json.loads((ROOT / "assets" / "page-production-template.json").read_text(encoding="utf-8"))
 
 
@@ -44,13 +47,15 @@ def page_for(character: str, outfit: str, expression: str, pose: str, auxiliary:
 
 
 class Phase2EAssetVersioningTests(unittest.TestCase):
-    def test_v12_is_still_the_default_and_v13_is_not_production_enabled(self):
+    def test_v12_is_still_the_default_and_v13_is_explicitly_released(self):
         default = load_core_manifest()
         self.assertEqual(default["bundle_id"], "core-characters-v1.2")
         self.assertEqual(build_page_prompt(TEMPLATE)["asset_selection"]["version"], "v1.2")
         self.assertEqual(V13_MANIFEST["bundle_id"], "core-characters-v1.3")
         self.assertEqual(V13_MANIFEST["release_status"], "pending_approval")
         self.assertFalse(V13_MANIFEST["production_enabled"])
+        self.assertEqual(RELEASED_V13_MANIFEST["release_status"], "released")
+        self.assertTrue(RELEASED_V13_MANIFEST["production_enabled"])
 
     def test_v13_resolves_each_identity_and_rejects_wrong_auxiliary_binding(self):
         pages = [

@@ -27,6 +27,10 @@ PDF、打印、社媒渲染、历史迁移、发布打包和完整性能统计�
 
 默认新项目使用 `production-ready`。`project_preflight.py --phase pre_generation --mode strict` 会检查页面依赖闭包；缺少 prompt、角色参考或生产参考时会明确阻断，不再只依赖页面清单存在。显式未知的 `project_profile` 也会阻断，不会被推断成 `production-ready`。
 
+资产版本以 `assets/style-registry.json` 为准：默认 `STYLE-CORE-01:v1.2` 绑定 `core-characters-v1.2`；已发布的 `STYLE-06:v0.1` 可在页面明确选择时使用 `core-characters-v1.3`，但不会改变全局默认。
+
+正式项目创建队列前必须存在 `project.json` 并通过 strict preflight；无项目契约的低层历史队列只有在明确传入 `--standalone-legacy` 时才允许创建。直接调用 Python API 的旧测试兼容参数暂时保留，生产 CLI 不默认绕过项目门禁。
+
 正式项目的 `generation_queue.py init` 会自动复验 strict 门禁，并在队列中保存绑定当前项目、版本和计划指纹的 `preflight_receipt`；门禁未通过时不会创建队列。队列建立后，普通 `claim` 还需要先用 `authorize-generation` 记录一次有限次数的用户授权。
 
 当 `page-manifest.json` 声明了 Research 白名单和 story trace 时，strict 预检会同时运行故事追溯与页面科学视觉闸门。页面级 `knowledge_claims`、`science_visual_checks` 和全书级 `science_visual_consistency` 只维护在 page manifest；`storyboard.json` 不重复保存同一份页面证据。

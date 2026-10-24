@@ -73,13 +73,15 @@ description: Use when the user provides an adult knowledge book or chapter, or o
 
 ## 3. 角色、画风与资产
 
-复用已批准且带版本号的 character bible、`character_reference_path`、`production_reference_path` 和画风。首次资产或画风试样等待人工确认；真实儿童角色必须遵守私有资料边界。资产注册表负责版本和哈希，page manifest 只记录当前页使用哪些资产。页面或资产失败保留机器可读 failure code，例如 `MISSING_ASSET`、`REFERENCE_NOT_FOUND`、`INVALID_DIMENSIONS`、`ASPECT_RATIO_MISMATCH` 和 `GENERATION_FAILED`。
+复用已批准且带版本号的 character bible、`character_reference_path`、`production_reference_path` 和画风。首次资产或画风试样等待人工确认；真实儿童角色必须遵守私有资料边界。资产注册表负责版本和哈希，page manifest 只记录当前页使用哪些资产。页面或资产失败保留机器可读 failure code，例如 `MISSING_ASSET`、`REFERENCE_NOT_FOUND`、`INVALID_DIMENSIONS`、`ASPECT_RATIO_MISMATCH` 和 `GENERATION_FAILED`。角色资产遵循“约 80% 固定资产、约 20% 页面变化”：固定角色身份、比例、画风和已选资产，页面只描述场景、道具、知识证据、构图、安全区和连续性变化。
+
+版本事实源是 `assets/style-registry.json`：默认 `STYLE-CORE-01:v1.2` 使用 `core-characters-v1.2`；已正式发布的 `STYLE-06:v0.1` 才显式使用 `core-characters-v1.3`。v1.3 不是全局默认，不能因为资产包已发布就替换历史默认角色与画风。
 
 快速出图协议是：先完成 `layout_design` 再调用图像生成器；稳定基础提示词只保留画风、角色不变特征、目标比例、全局禁项和文字安全区；正式参考图使用 `production_reference_path`；每页一次生成；先检查已有结果，不要重复提交。历史“两页一批”仅为兼容记录，不代表并行许可。
 
 ## 4. 门禁、生产和审核
 
-规划、资产解析和 `layout_design` 完成后，在第一张正式图片提交前运行一次 `project_preflight.py ... --phase pre_generation --mode strict`。预检是只读的，不调用图片模型；正式项目的 `generation_queue.py init` 会自动复验同一 strict 门禁并保存 `preflight_receipt`，门禁不通过时不创建或改写队列。没有 `project.json` 的底层独立队列才使用历史兼容模式。队列不会替代 Research、教育目标、内容、strict-assets 或比例检查，只验证结构输入并绑定门禁结果。
+规划、资产解析和 `layout_design` 完成后，在第一张正式图片提交前运行一次 `project_preflight.py ... --phase pre_generation --mode strict`。预检是只读的，不调用图片模型；正式项目的 `generation_queue.py init` 会自动复验同一 strict 门禁并保存 `preflight_receipt`，门禁不通过时不创建或改写队列。没有 `project.json` 的低层独立队列默认被 CLI 拒绝；只有明确进行历史兼容测试时才加 `--standalone-legacy`。队列不会替代 Research、教育目标、内容、strict-assets 或比例检查，只验证结构输入并绑定门禁结果。
 
 逐页只做一页一次轻量检查、一次授权调用、候选隔离、尺寸/路径/SHA-256 校验和页面审核。生产队列必须先记录有限次数的用户生成授权，`claim` 消费授权 ID；超时或 `pending_unknown` 立即停止，未经新授权不得自动恢复、重试或领取下一页。
 
