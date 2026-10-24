@@ -162,7 +162,7 @@ Run: `python -X utf8 -m pytest tests/test_generation_queue.py tests/test_phase3_
 **Files:**
 - Modify: `docs/superpowers/.../progress.md` (git-ignored ledger only)
 
-- [ ] **Step 1: Run focused suite, full suite, compileall and diff check**
-- [ ] **Step 2: Run installed Skill Windmill smoke test**
-- [ ] **Step 3: Measure preflight, queue init, authorization and claim timings**
-- [ ] **Step 4: Perform final self-review and record deferred issues**
+- [x] **Step 1: Run focused suite, full suite, compileall and diff check**
+- [x] **Step 2: Run installed Skill Windmill smoke test**
+- [x] **Step 3: Measure preflight, queue init, authorization and claim timings**
+- [x] **Step 4: Perform final self-review and record deferred issues**
