@@ -10,6 +10,7 @@ from typing import Any, Mapping
 from PIL import Image, UnidentifiedImageError
 
 from asset_catalog import validate_page_asset_bindings
+from asset_hashing import file_hash, matches_file_hash
 from style_lock import (
     APPROVED_REFERENCE_SHA256,
     load_style_master,
@@ -327,19 +328,19 @@ def _manifest_failure(manifest: Mapping[str, Any], bundle_root: str | Path | Non
             except ValueError:
                 return "ASSET_MANIFEST_NOT_APPROVED"
             try:
-                actual_digest = hashlib.sha256(candidate.read_bytes()).hexdigest()
+                actual_digest = file_hash(candidate)
             except OSError:
                 return "ASSET_MANIFEST_NOT_APPROVED"
-            if not candidate.is_file() or actual_digest != digest.lower():
+            if not candidate.is_file() or not matches_file_hash(candidate, digest):
                 return "ASSET_MANIFEST_NOT_APPROVED"
         manifest_path = root / "manifest.json"
         try:
             on_disk_manifest = _load_object(manifest_path)
-            manifest_bytes_hash = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+            manifest_bytes_hash = file_hash(manifest_path)
             selected_manifest_hash = _canonical_hash(manifest)
         except (OSError, ValueError, json.JSONDecodeError, TypeError):
             return "ASSET_MANIFEST_NOT_APPROVED"
-        if (manifest_bytes_hash != receipt.get("manifest_bytes_sha256") or
+        if (not matches_file_hash(manifest_path, receipt.get("manifest_bytes_sha256", "")) or
                 _canonical_hash(on_disk_manifest) != receipt.get("manifest_sha256") or
                 selected_manifest_hash != receipt.get("manifest_sha256")):
             return "ASSET_MANIFEST_NOT_APPROVED"

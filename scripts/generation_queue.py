@@ -23,7 +23,8 @@ from typing import Any
 
 from PIL import Image
 
-from page_production import assemble_page_task
+from build_pure_image_delivery import _resolve_content_layout
+from page_production import assemble_page_task, build_host_prompt, validate_host_prompt
 from page_versions import IMAGE_DEPENDENCY_FIELDS, OPTIONAL_IMAGE_DEPENDENCY_FIELDS, image_dependency_fingerprint
 
 
@@ -33,6 +34,7 @@ DEFAULT_MAX_IN_FLIGHT = 2
 DEFAULT_MAX_ATTEMPTS = 2
 MIN_IMAGE_SIDE_PX = 1024
 COORDINATION_MODE = "single-coordinator"
+WORKFLOW_RULES_VERSION = "workflow-gates-v1"
 QUEUE_LOCK_TIMEOUT_SECONDS = 5.0
 QUEUE_LOCK_POLL_SECONDS = 0.05
 QUEUE_LOCK_STALE_SECONDS = 300.0
@@ -40,12 +42,17 @@ ACTIVE_STATUSES = {"running"}
 DONE_STATUSES = {"completed", "cached"}
 RETRYABLE_STATUSES = {"pending", "retryable"}
 REQUEST_STATES = {"running", "succeeded", "failed", "pending_unknown", "timed_out"}
+VISUAL_REVIEW_STATES = {"not_started", "pending", "passed", "failed"}
 UNKNOWN = "unknown"
 COST_UNKNOWN = "cost_unknown"
 LIFECYCLE_ENFORCED_FIELD = "lifecycle_enforced"
 SOCIAL_PROFILE_ASPECT_RATIOS = {
     "xiaohongshu-feed-3x4": "3:4",
     "social-vertical-9x16": "9:16",
+}
+SOCIAL_PROFILE_CANVASES = {
+    "xiaohongshu-feed-3x4": (1080, 1440),
+    "social-vertical-9x16": (1080, 1920),
 }
 
 
@@ -299,7 +306,12 @@ def _file_hash(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _page_reference_assets(book_dir: Path, page: dict[str, Any]) -> list[dict[str, Any]]:
+def _page_reference_assets(
+    book_dir: Path,
+    page: dict[str, Any],
+    *,
+    content_dir: Path | None = None,
+) -> list[dict[str, Any]]:
     """Resolve optional page-local supplemental references and verify their hashes."""
     raw = page.get("character_reference_assets")
     if raw is None:
@@ -314,7 +326,7 @@ def _page_reference_assets(book_dir: Path, page: dict[str, Any]) -> list[dict[st
         path_value = record.get("path")
         if not isinstance(path_value, str) or not path_value.strip():
             raise ValueError(f"character_reference_assets[{index}] is missing path")
-        path = _resolve_book_path(book_dir, path_value)
+        path = _resolve_book_path(book_dir, path_value, content_dir=content_dir)
         if path is None or not path.is_file():
             raise ValueError(f"character reference asset does not exist: {path_value}")
         relative = Path(path_value.replace("\\", "/")).as_posix()
@@ -348,7 +360,11 @@ def _parse_aspect_ratio(value: str) -> tuple[int, int]:
     return numerator, denominator
 
 
-def _validate_image_file(path: Path, declared_aspect_ratio: str | None = None) -> dict[str, Any]:
+def _validate_image_file(
+    path: Path,
+    declared_aspect_ratio: str | None = None,
+    expected_canvas: tuple[int, int] | None = None,
+) -> dict[str, Any]:
     """Verify, reopen, fully decode, and validate one generated image."""
     try:
         with Image.open(path) as image:
@@ -375,6 +391,12 @@ def _validate_image_file(path: Path, declared_aspect_ratio: str | None = None) -
             raise ValueError(
                 f"output image aspect ratio must be {declared_aspect_ratio}: {width}x{height}"
             )
+    if expected_canvas is not None and (width, height) != expected_canvas:
+        expected_width, expected_height = expected_canvas
+        raise ValueError(
+            "output image exact canvas is "
+            f"{width}x{height}; expected {expected_width}x{expected_height}"
+        )
     divisor = math.gcd(width, height)
     return {
         "width_px": width,
@@ -394,8 +416,13 @@ def _resolve_contained_path(book_dir: Path, candidate: Path) -> Path:
     return resolved
 
 
-def _resolve_book_path(book_dir: Path, relative_or_absolute: str | None) -> Path | None:
-    """Resolve a project input path and reject absolute/traversal/symlink escapes."""
+def _resolve_book_path(
+    book_dir: Path,
+    relative_or_absolute: str | None,
+    *,
+    content_dir: Path | None = None,
+) -> Path | None:
+    """Resolve a project input path across the canonical book/content roots."""
     if not relative_or_absolute:
         return None
     raw = str(relative_or_absolute)
@@ -406,8 +433,30 @@ def _resolve_book_path(book_dir: Path, relative_or_absolute: str | None) -> Path
         raise ValueError(f"input path must be relative to book directory: {relative_or_absolute}")
     if ".." in posix_candidate.parts or ".." in windows_candidate.parts:
         raise ValueError(f"input path must not contain '..': {relative_or_absolute}")
-    candidate = Path(normalized)
-    return _resolve_contained_path(book_dir, candidate)
+    book_root = book_dir.resolve()
+    roots = []
+    if content_dir is not None:
+        content_root = Path(content_dir).resolve()
+        try:
+            content_root.relative_to(book_root)
+        except ValueError as exc:
+            raise ValueError(f"content directory must stay inside book directory: {content_dir}") from exc
+        roots.append(content_root)
+    roots.append(book_root)
+    fallback: Path | None = None
+    for root in roots:
+        raw_candidate = root / normalized
+        resolved = raw_candidate.resolve()
+        if fallback is None:
+            fallback = resolved
+        if not raw_candidate.exists() and not raw_candidate.is_symlink():
+            continue
+        try:
+            resolved.relative_to(book_root)
+        except ValueError as exc:
+            raise ValueError(f"path must stay inside book directory: {relative_or_absolute}") from exc
+        return resolved
+    return fallback
 
 
 def _resolve_output_path(book_dir: Path, relative_or_absolute: str | None) -> Path | None:
@@ -438,6 +487,8 @@ def _story_dependency_segment(
     book_dir: Path,
     story_path: Path,
     dependency: Any,
+    *,
+    content_dir: Path | None = None,
 ) -> str | None:
     """Resolve a declared page dependency or return None for conservative fallback.
 
@@ -448,7 +499,7 @@ def _story_dependency_segment(
     source_text = story_text
     descriptor = dependency
     if isinstance(dependency, dict) and dependency.get("path"):
-        source = _resolve_book_path(book_dir, str(dependency["path"]))
+        source = _resolve_book_path(book_dir, str(dependency["path"]), content_dir=content_dir)
         if source is None or not source.is_file():
             return None
         try:
@@ -509,7 +560,16 @@ def _story_dependency_segment(
             return "".join(source_lines[start_index:end_index])
 
     if isinstance(descriptor, list) and descriptor:
-        segments = [_story_dependency_segment(story_text, book_dir, story_path, item) for item in descriptor]
+        segments = [
+            _story_dependency_segment(
+                story_text,
+                book_dir,
+                story_path,
+                item,
+                content_dir=content_dir,
+            )
+            for item in descriptor
+        ]
         if all(segment is not None for segment in segments):
             return "\n".join(segment for segment in segments if segment is not None)
     return None
@@ -521,6 +581,8 @@ def _story_dependency_fingerprint(
     book_dir: Path,
     dependencies: list[Any],
     whole_story_sha256: str,
+    *,
+    content_dir: Path | None = None,
 ) -> tuple[str, str]:
     present = [dependency for dependency in dependencies if dependency is not None]
     if not present:
@@ -528,7 +590,13 @@ def _story_dependency_fingerprint(
 
     parts = []
     for dependency in present:
-        segment = _story_dependency_segment(story_text, book_dir, story_path, dependency)
+        segment = _story_dependency_segment(
+            story_text,
+            book_dir,
+            story_path,
+            dependency,
+            content_dir=content_dir,
+        )
         if isinstance(dependency, str) and dependency.strip() in {"story.md", "whole-story"}:
             return "whole-story", whole_story_sha256
         if isinstance(dependency, dict) and dependency.get("mode") in {"book", "whole-story"}:
@@ -570,6 +638,36 @@ def _declared_aspect_ratio(*pages: dict[str, Any]) -> str | None:
     return values[0] if values else None
 
 
+def _declared_canvas(*pages: dict[str, Any]) -> tuple[int, int] | None:
+    values: list[tuple[int, int]] = []
+    for page in pages:
+        if not isinstance(page, dict):
+            continue
+        containers = [page]
+        nested_layout = page.get("layout_design")
+        if isinstance(nested_layout, dict):
+            containers.append(nested_layout)
+        for container in containers:
+            social_layout = container.get("social_layout")
+            if isinstance(social_layout, dict):
+                containers.append(social_layout)
+            profile = container.get("profile")
+            if profile in SOCIAL_PROFILE_CANVASES:
+                values.append(SOCIAL_PROFILE_CANVASES[profile])
+            for field in ("canvas", "source_canvas", "expected_canvas"):
+                canvas = container.get(field)
+                if not isinstance(canvas, dict):
+                    continue
+                width = canvas.get("width_px")
+                height = canvas.get("height_px")
+                if type(width) is int and type(height) is int and width > 0 and height > 0:
+                    values.append((width, height))
+    distinct = set(values)
+    if len(distinct) > 1:
+        raise ValueError(f"page declares conflicting canvases: {sorted(distinct)}")
+    return values[0] if values else None
+
+
 def _page_number(page: dict[str, Any], index: int) -> int:
     raw = page.get("page", index)
     try:
@@ -592,7 +690,11 @@ def _pages(document: dict[str, Any], name: str) -> list[dict[str, Any]]:
 
 def _plan(book_dir: Path) -> dict[str, Any]:
     book_dir = book_dir.resolve()
-    story_path = book_dir / "story.md"
+    content_dir, _layout = _resolve_content_layout(book_dir)
+    story_path = next(
+        (candidate for candidate in (content_dir / "story.md", book_dir / "story.md") if candidate.is_file()),
+        content_dir / "story.md",
+    )
     if not story_path.exists():
         raise ValueError("complete story is required before image generation: story.md")
     story_text = story_path.read_text(encoding="utf-8")
@@ -600,9 +702,9 @@ def _plan(book_dir: Path) -> dict[str, Any]:
         raise ValueError("complete story is required before image generation: story.md")
     story_sha256 = _file_hash(story_path)
 
-    manifest = _read_json(book_dir / "page-manifest.json")
-    storyboard = _read_json(book_dir / "storyboard.json")
-    layout = _read_json(book_dir / "layout.json")
+    manifest = _read_json(content_dir / "page-manifest.json")
+    storyboard = _read_json(content_dir / "storyboard.json")
+    layout = _read_json(content_dir / "layout.json")
     manifest_pages = _pages(manifest, "page-manifest.json")
     storyboard_pages = _pages(storyboard, "storyboard.json")
     layout_pages = _pages(layout, "layout.json")
@@ -637,27 +739,35 @@ def _plan(book_dir: Path) -> dict[str, Any]:
         prompt_path_value = page.get("current_prompt_path") or page.get("prompt_path")
         if not isinstance(prompt_path_value, str) or not prompt_path_value.strip():
             raise ValueError(f"page {number} is missing its completed prompt path")
-        prompt_path = _resolve_book_path(book_dir, prompt_path_value)
+        prompt_path = _resolve_book_path(book_dir, prompt_path_value, content_dir=content_dir)
         if prompt_path is None or not prompt_path.is_file():
             raise ValueError(f"page {number} prompt does not exist: {prompt_path_value}")
 
         character_path_value = page.get("character_reference_path")
         if not isinstance(character_path_value, str) or not character_path_value.strip():
             raise ValueError(f"page {number} is missing character_reference_path")
-        character_path = _resolve_book_path(book_dir, character_path_value)
+        character_path = _resolve_book_path(book_dir, character_path_value, content_dir=content_dir)
         if character_path is None or not character_path.is_file():
             raise ValueError(f"page {number} character reference does not exist: {character_path_value}")
 
         production_path_value = page.get("production_reference_path") or character_path_value
-        production_path = _resolve_book_path(book_dir, production_path_value)
+        production_path = _resolve_book_path(book_dir, production_path_value, content_dir=content_dir)
         if production_path is None or not production_path.is_file():
             raise ValueError(f"page {number} production reference does not exist: {production_path_value}")
-        reference_assets = _page_reference_assets(book_dir, page)
+        reference_assets = _page_reference_assets(book_dir, page, content_dir=content_dir)
         page_task = assemble_page_task(
             page,
             storyboard_page=storyboard_by_page[number],
             project_root=book_dir,
         )
+        prompt_text = prompt_path.read_text(encoding="utf-8")
+        page_task["host_prompt"] = build_host_prompt(page_task, prompt_text)
+        page_task["prompt_submission"] = {
+            "status": "assembled_not_observed",
+            "source_prompt_path": Path(prompt_path_value).as_posix(),
+            "host_evidence": None,
+            "evidence_limit": "assembled prompt text does not prove the host submitted this exact text",
+        }
 
         character_versions.add(str(page.get("characters_version", "")).strip())
         character_paths.add(Path(character_path_value).as_posix())
@@ -678,8 +788,14 @@ def _plan(book_dir: Path) -> dict[str, Any]:
             book_dir,
             story_dependency_specs,
             story_sha256,
+            content_dir=content_dir,
         )
         declared_aspect_ratio = _declared_aspect_ratio(
+            page,
+            storyboard_by_page[number],
+            layout_page,
+        )
+        expected_canvas = _declared_canvas(
             page,
             storyboard_by_page[number],
             layout_page,
@@ -700,6 +816,7 @@ def _plan(book_dir: Path) -> dict[str, Any]:
         )
         layout_fingerprint = {
             "source_aspect_ratio": declared_aspect_ratio,
+            "expected_canvas": list(expected_canvas) if expected_canvas else None,
             "style_version": style_value,
         }
         base_fingerprint = _canonical_hash(
@@ -732,7 +849,11 @@ def _plan(book_dir: Path) -> dict[str, Any]:
         output_error = None
         if output_path.is_file():
             try:
-                image_validation = _validate_image_file(output_path, declared_aspect_ratio)
+                image_validation = _validate_image_file(
+                    output_path,
+                    declared_aspect_ratio,
+                    expected_canvas,
+                )
             except ValueError as exc:
                 output_error = str(exc)
             else:
@@ -773,6 +894,7 @@ def _plan(book_dir: Path) -> dict[str, Any]:
                 "story_dependency_scope": story_dependency_scope,
                 "story_dependency_fingerprint": story_dependency_fingerprint,
                 "declared_aspect_ratio": declared_aspect_ratio,
+                "expected_canvas": list(expected_canvas) if expected_canvas else None,
                 "output_path": output_relative,
                 "previous_output_path": None,
                 "output_sha256": output_sha256,
@@ -836,6 +958,38 @@ def _job(state: dict[str, Any], page: int) -> dict[str, Any]:
     raise ValueError(f"page is not in queue: {page}")
 
 
+def _visual_review_gate_enabled(state: dict[str, Any]) -> bool:
+    gate = state.get("visual_review_gate")
+    return isinstance(gate, dict) and gate.get("enabled") is True
+
+
+def _assert_visual_review_gate(state: dict[str, Any], page: int) -> None:
+    """Require one recorded visual review before a later page is claimed."""
+    if not _visual_review_gate_enabled(state):
+        return
+    for prior in sorted(state.get("jobs", []), key=lambda item: int(item.get("page", 0))):
+        if int(prior.get("page", 0)) >= int(page):
+            break
+        if prior.get("status") not in DONE_STATUSES:
+            raise RuntimeError(
+                f"VISUAL_REVIEW_REQUIRED: page {prior.get('page')} must complete before page {page}"
+            )
+        review = prior.get("visual_review")
+        if not isinstance(review, dict) or review.get("status") != "passed":
+            raise RuntimeError(
+                f"VISUAL_REVIEW_REQUIRED: page {prior.get('page')} has no passed visual review"
+            )
+
+
+def _default_visual_review() -> dict[str, Any]:
+    return {
+        "status": "not_started",
+        "reviewer_type": None,
+        "evidence": None,
+        "recorded_at": None,
+    }
+
+
 def _append_event(state: dict[str, Any], event: str, page: int | None = None, **fields: Any) -> None:
     record = {"event": event, "at": _now(), **fields}
     if page is not None:
@@ -845,12 +999,15 @@ def _append_event(state: dict[str, Any], event: str, page: int | None = None, **
 
 def _page_event_fields(job: dict[str, Any]) -> dict[str, Any]:
     """Return stable page metadata shared by queue events."""
-    return {
+    fields = {
         "page_id": job.get("page_id") or f"PAGE-{int(job['page']):02d}",
         "page_version": job.get("page_version"),
         "revision": int(job.get("revision", 1)),
         "asset_dependency_fingerprint": job.get("asset_dependency_fingerprint"),
     }
+    if job.get("generation_authorization_id") is not None:
+        fields["generation_authorization_id"] = job["generation_authorization_id"]
+    return fields
 
 
 def _request_lifecycle(state: dict[str, Any]) -> list[dict[str, Any]]:
@@ -877,6 +1034,27 @@ def _new_request_record(
     recovery_of_request_id: str | None = None,
     recovery_approval: str | None = None,
 ) -> dict[str, Any]:
+    declared_reference_submission = {
+        "status": "declared_not_observed",
+        "declared_paths": [
+            str(job.get(field)).replace("\\", "/")
+            for field in ("character_reference_path", "production_reference_path")
+            if isinstance(job.get(field), str) and job.get(field).strip()
+        ],
+        "host_evidence": None,
+        "evidence_limit": "path metadata does not prove the host received or used the reference",
+    }
+    page_task = job.get("page_task")
+    if isinstance(page_task, dict) and isinstance(page_task.get("reference_submission"), dict):
+        declared_reference_submission = copy.deepcopy(page_task["reference_submission"])
+    declared_prompt_submission = {
+        "status": "declared_not_observed",
+        "source_prompt_path": job.get("prompt_path"),
+        "host_evidence": None,
+        "evidence_limit": "path metadata does not prove the host submitted this exact prompt",
+    }
+    if isinstance(page_task, dict) and isinstance(page_task.get("prompt_submission"), dict):
+        declared_prompt_submission = copy.deepcopy(page_task["prompt_submission"])
     return {
         "lifecycle_schema_version": REQUEST_LIFECYCLE_SCHEMA_VERSION,
         "request_id": f"request-{uuid.uuid4().hex}",
@@ -888,6 +1066,8 @@ def _new_request_record(
         "local_started_at": job.get("started_at") or UNKNOWN,
         "submission_observed": False,
         "backend_task_id": UNKNOWN,
+        "reference_submission": declared_reference_submission,
+        "prompt_submission": declared_prompt_submission,
         "wrapper_finished_at": None,
         "wrapper_elapsed_ms": UNKNOWN,
         "terminal_state": "running",
@@ -1040,12 +1220,105 @@ def _book_path_from_queue(state: dict[str, Any], value: str | Path) -> Path:
     return Path(state["book_dir"]) / value if not Path(value).is_absolute() else Path(value)
 
 
+def _find_project_root(book_dir: Path) -> Path | None:
+    for candidate in (book_dir, *book_dir.parents):
+        if (candidate / "project.json").is_file():
+            return candidate
+    return None
+
+
+def _pre_generation_gate(
+    book_dir: Path,
+    planned: dict[str, Any],
+    *,
+    allow_standalone_legacy: bool = True,
+) -> dict[str, Any]:
+    """Return a bound strict gate receipt for production projects.
+
+    Low-level standalone queue fixtures do not have a project contract and
+    retain their historical behavior. A real project always crosses the
+    strict preflight boundary before a queue can be created.
+    """
+    project_root = _find_project_root(book_dir)
+    if project_root is None:
+        if not allow_standalone_legacy:
+            raise RuntimeError(
+                "PRE_GENERATION_PROJECT_REQUIRED: standalone queue creation requires "
+                "--standalone-legacy"
+            )
+        return {
+            "schema_version": 1,
+            "status": "not_applicable",
+            "mode": "standalone-legacy",
+            "phase": "pre_generation",
+            "workflow_rules_version": WORKFLOW_RULES_VERSION,
+            "plan_fingerprint": planned["plan_fingerprint"],
+            "created_at": _now(),
+        }
+
+    from project_preflight import preflight_project
+
+    report = preflight_project(
+        project_root,
+        book_dir.parent.name,
+        version=book_dir.name,
+        phase="pre_generation",
+        mode="strict",
+    )
+    if report.get("status") != "passed":
+        blockers = report.get("blockers") if isinstance(report.get("blockers"), list) else []
+        detail = ";".join(str(item) for item in blockers[:12]) or "unknown blocker"
+        raise RuntimeError(f"PRE_GENERATION_GATE_BLOCKED:{detail}")
+    if report.get("plan_fingerprint") != planned.get("plan_fingerprint"):
+        raise RuntimeError("PRE_GENERATION_PLAN_MISMATCH:strict preflight and queue plan differ")
+    return {
+        "schema_version": 1,
+        "status": "passed",
+        "mode": "production",
+        "phase": "pre_generation",
+        "project_root": report.get("project_root"),
+        "book_key": report.get("book_key"),
+        "version": report.get("version"),
+        "plan_fingerprint": report.get("plan_fingerprint"),
+        "workflow_rules_version": report.get("workflow_rules_version", WORKFLOW_RULES_VERSION),
+        "created_at": _now(),
+    }
+
+
+def _assert_production_gate_receipt(state: dict[str, Any]) -> None:
+    """Prevent pre-gate legacy queues from reaching an irreversible claim."""
+    book_dir = Path(state["book_dir"]).resolve()
+    project_root = _find_project_root(book_dir)
+    if project_root is None:
+        return
+    gate = state.get("workflow_gate")
+    expected = {
+        "schema_version": 1,
+        "status": "passed",
+        "mode": "production",
+        "phase": "pre_generation",
+        "project_root": str(project_root),
+        "book_key": book_dir.parent.name,
+        "version": book_dir.name,
+        "plan_fingerprint": state.get("plan_fingerprint"),
+        "workflow_rules_version": WORKFLOW_RULES_VERSION,
+    }
+    if (
+        not isinstance(gate, dict)
+        or any(gate.get(key) != value for key, value in expected.items())
+        or state.get("preflight_receipt") != gate
+    ):
+        raise RuntimeError("PRE_GENERATION_GATE_REQUIRED:queue has no valid strict preflight receipt")
+
+
 def init_queue(
     book_dir: str | Path,
     queue_path: str | Path,
     *,
     max_in_flight: int = DEFAULT_MAX_IN_FLIGHT,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    allow_standalone_legacy: bool = True,
+    require_visual_review: bool = False,
 ) -> dict[str, Any]:
     if max_in_flight < 1 or max_in_flight > 3:
         raise ValueError("max_in_flight must be between 1 and 3")
@@ -1054,6 +1327,12 @@ def init_queue(
     book_dir = Path(book_dir).resolve()
     queue_path = Path(queue_path).resolve()
     planned = _plan(book_dir)
+    workflow_gate = _pre_generation_gate(
+        book_dir,
+        planned,
+        allow_standalone_legacy=allow_standalone_legacy,
+    )
+    requires_user_authorization = workflow_gate.get("mode") == "production"
     with _queue_mutation_lock(queue_path):
         existing: dict[str, Any] | None = None
         if queue_path.exists():
@@ -1062,12 +1341,18 @@ def init_queue(
                 raise ValueError("existing queue belongs to a different book directory")
 
         old_by_page = {int(job["page"]): job for job in existing.get("jobs", [])} if existing else {}
+        existing_gate = existing.get("visual_review_gate") if existing else None
+        visual_review_enabled = bool(require_visual_review) or (
+            isinstance(existing_gate, dict) and existing_gate.get("enabled") is True
+        )
         jobs = []
         for fresh in planned["jobs"]:
             old = old_by_page.get(int(fresh["page"]))
             if old and old.get("base_request_fingerprint") == fresh["base_request_fingerprint"]:
                 preserved = copy.deepcopy(old)
                 preserved["max_attempts"] = max_attempts
+                if visual_review_enabled and not isinstance(preserved.get("visual_review"), dict):
+                    preserved["visual_review"] = _default_visual_review()
                 for key in (
                     "page_id",
                     "page_version",
@@ -1076,6 +1361,7 @@ def init_queue(
                     "story_dependency_scope",
                     "story_dependency_fingerprint",
                     "declared_aspect_ratio",
+                    "expected_canvas",
                     "asset_dependency_fingerprint",
                     "reference_assets",
                 ):
@@ -1083,7 +1369,17 @@ def init_queue(
                 output = _book_path_from_queue({"book_dir": str(book_dir)}, preserved.get("output_path", ""))
                 if preserved.get("status") in DONE_STATUSES:
                     try:
-                        image_validation = _validate_image_file(output, fresh.get("declared_aspect_ratio"))
+                        expected_canvas = fresh.get("expected_canvas")
+                        expected_canvas_tuple = (
+                            tuple(expected_canvas)
+                            if isinstance(expected_canvas, list) and len(expected_canvas) == 2
+                            else None
+                        )
+                        image_validation = _validate_image_file(
+                            output,
+                            fresh.get("declared_aspect_ratio"),
+                            expected_canvas_tuple,
+                        )
                     except ValueError as exc:
                         preserved["status"] = "pending"
                         preserved["output_sha256"] = None
@@ -1105,6 +1401,8 @@ def init_queue(
                 jobs.append(preserved)
                 continue
             fresh["max_attempts"] = max_attempts
+            if visual_review_enabled:
+                fresh["visual_review"] = _default_visual_review()
             if old:
                 # A changed request must never be treated as a cache hit merely
                 # because it points at the previous page's output path.
@@ -1113,6 +1411,12 @@ def init_queue(
                 fresh["last_error"] = "request fingerprint changed; previous output is not reusable"
             jobs.append(fresh)
 
+        plan_changed = bool(existing and existing.get("plan_fingerprint") != planned["plan_fingerprint"])
+        generation_authorizations = (
+            []
+            if plan_changed
+            else copy.deepcopy(existing.get("generation_authorizations", [])) if existing else []
+        )
         state = {
             "schema_version": SCHEMA_VERSION,
             "coordination_mode": COORDINATION_MODE,
@@ -1123,15 +1427,24 @@ def init_queue(
             "page_count": planned["page_count"],
             "plan_fingerprint": planned["plan_fingerprint"],
             "story_sha256": planned["story_sha256"],
-        "character_reference_path": planned["character_reference_path"],
-        "character_reference_paths": planned["character_reference_paths"],
+            "character_reference_path": planned["character_reference_path"],
+            "character_reference_paths": planned["character_reference_paths"],
             "character_version": planned["character_version"],
+            "workflow_gate": workflow_gate,
+            "preflight_receipt": workflow_gate if requires_user_authorization else None,
+            "requires_user_authorization": requires_user_authorization,
             "max_in_flight": max_in_flight,
             "max_attempts": max_attempts,
+            "visual_review_gate": {
+                "enabled": visual_review_enabled,
+                "scope": "serial_pages",
+                "rule": "a completed page needs one passed visual review before a later page can be claimed",
+            },
             "jobs": jobs,
             "events": copy.deepcopy(existing.get("events", [])) if existing else [],
             "request_lifecycle": copy.deepcopy(existing.get("request_lifecycle", [])) if existing else [],
             "recovery_authorizations": copy.deepcopy(existing.get("recovery_authorizations", [])) if existing else [],
+            "generation_authorizations": generation_authorizations,
             "created_at": existing.get("created_at") if existing else _now(),
             "updated_at": _now(),
         }
@@ -1152,12 +1465,75 @@ def init_queue(
         return state
 
 
+def authorize_generation(
+    queue_path: str | Path,
+    *,
+    approval: str,
+    max_calls: int = 1,
+) -> dict[str, Any]:
+    """Record one explicit user authorization for ordinary generation calls."""
+    approval = str(approval).strip()
+    if not approval:
+        raise ValueError("generation approval must be non-empty")
+    if type(max_calls) is not int or max_calls < 1:
+        raise ValueError("generation max_calls must be a positive integer")
+    queue_path = Path(queue_path).resolve()
+    with _queue_mutation_lock(queue_path):
+        state = _load_queue(queue_path)
+        authorization = {
+            "authorization_id": f"generation-auth-{uuid.uuid4().hex}",
+            "approval": approval,
+            "approved_at": _now(),
+            "max_calls": max_calls,
+            "used_calls": 0,
+        }
+        state.setdefault("generation_authorizations", []).append(authorization)
+        _append_event(state, "generation_authorized", **authorization)
+        _save_queue(queue_path, state)
+        return copy.deepcopy(authorization)
+
+
+def _generation_authorization(
+    state: dict[str, Any],
+    authorization_id: str | None,
+    calls: int,
+) -> dict[str, Any] | None:
+    if not state.get("requires_user_authorization", False):
+        return None
+    if not isinstance(authorization_id, str) or not authorization_id.strip():
+        raise PermissionError("generation authorization is required")
+    authorizations = state.get("generation_authorizations", [])
+    authorization = next(
+        (item for item in authorizations if item.get("authorization_id") == authorization_id),
+        None,
+    )
+    if authorization is None:
+        raise PermissionError("generation authorization is invalid")
+    available = int(authorization.get("max_calls", 0)) - int(authorization.get("used_calls", 0))
+    if available < calls:
+        raise PermissionError("generation authorization has already been used or has insufficient calls")
+    return authorization
+
+
+def _consume_generation_authorization(
+    state: dict[str, Any],
+    authorization_id: str | None,
+    calls: int,
+) -> None:
+    authorization = _generation_authorization(state, authorization_id, calls)
+    if authorization is None:
+        return
+    authorization["used_calls"] = int(authorization.get("used_calls", 0)) + calls
+    authorization["used_at"] = _now()
+
+
 def _claim_job_state(
     state: dict[str, Any],
     job: dict[str, Any],
     *,
     recovery_of_request_id: str | None = None,
     recovery_approval: str | None = None,
+    generation_authorization_id: str | None = None,
     emit_claim_event: bool = True,
 ) -> dict[str, Any]:
     if job["status"] in DONE_STATUSES:
@@ -1181,6 +1557,8 @@ def _claim_job_state(
     if recovery_of_request_id is not None:
         job["recovery_of_request_id"] = recovery_of_request_id
         job["recovery_approval"] = recovery_approval
+    if generation_authorization_id is not None:
+        job["generation_authorization_id"] = generation_authorization_id
     record = _append_request_record(
         state,
         job,
@@ -1199,20 +1577,38 @@ def _claim_job_state(
     return copy.deepcopy(job)
 
 
-def claim_job(queue_path: str | Path, page: int) -> dict[str, Any]:
+def claim_job(
+    queue_path: str | Path,
+    page: int,
+    *,
+    authorization_id: str | None = None,
+) -> dict[str, Any]:
     queue_path = Path(queue_path).resolve()
     with _queue_mutation_lock(queue_path):
         state = _load_queue(queue_path)
+        _assert_production_gate_receipt(state)
         job = _job(state, page)
+        _assert_visual_review_gate(state, page)
         running = sum(1 for item in state["jobs"] if item["status"] in ACTIVE_STATUSES)
         if running >= int(state["max_in_flight"]):
             raise RuntimeError("max_in_flight reached; complete or fail a running page first")
-        result = _claim_job_state(state, job)
+        _generation_authorization(state, authorization_id, 1)
+        result = _claim_job_state(
+            state,
+            job,
+            generation_authorization_id=authorization_id,
+        )
+        _consume_generation_authorization(state, authorization_id, 1)
         _save_queue(queue_path, state)
         return result
 
 
-def claim_batch(queue_path: str | Path, pages: list[int]) -> list[dict[str, Any]]:
+def claim_batch(
+    queue_path: str | Path,
+    pages: list[int],
+    *,
+    authorization_id: str | None = None,
+) -> list[dict[str, Any]]:
     """Atomically claim a bounded page group for one host coordinator.
 
     The batch limit controls queue bookkeeping only; it does not claim that the
@@ -1221,10 +1617,15 @@ def claim_batch(queue_path: str | Path, pages: list[int]) -> list[dict[str, Any]
     queue_path = Path(queue_path).resolve()
     with _queue_mutation_lock(queue_path):
         state = _load_queue(queue_path)
+        _assert_production_gate_receipt(state)
         normalized = [int(page) for page in pages]
         if not normalized or len(set(normalized)) != len(normalized):
             raise ValueError("claim batch requires one or more distinct page numbers")
         jobs = [_job(state, page) for page in normalized]
+        if _visual_review_gate_enabled(state) and len(jobs) > 1:
+            raise RuntimeError("VISUAL_REVIEW_GATE_REQUIRES_SERIAL_CLAIMS")
+        for job in jobs:
+            _assert_visual_review_gate(state, int(job["page"]))
         running = sum(1 for item in state["jobs"] if item["status"] in ACTIVE_STATUSES)
         capacity = int(state["max_in_flight"]) - running
         if len(jobs) > capacity:
@@ -1237,12 +1638,23 @@ def claim_batch(queue_path: str | Path, pages: list[int]) -> list[dict[str, Any]
         for job in jobs:
             if _current_request(state, job) and _current_request(state, job).get("terminal_state") in {"timed_out", "pending_unknown"}:
                 raise RuntimeError(f"page {job['page']} has an unresolved unknown request; recovery authorization is required")
-        claimed_jobs = [_claim_job_state(state, job, emit_claim_event=False) for job in jobs]
+        _generation_authorization(state, authorization_id, len(jobs))
+        claimed_jobs = [
+            _claim_job_state(
+                state,
+                job,
+                generation_authorization_id=authorization_id,
+                emit_claim_event=False,
+            )
+            for job in jobs
+        ]
+        _consume_generation_authorization(state, authorization_id, len(jobs))
         _append_event(
             state,
             "batch_claimed",
             pages=normalized,
             attempts=[job["attempts"] for job in claimed_jobs],
+            generation_authorization_id=authorization_id,
             page_records=[
                 {**_page_event_fields(job), "attempt": job["attempts"], "request_id": job.get("current_request_id")}
                 for job in claimed_jobs
@@ -1273,7 +1685,17 @@ def complete_job(
         relative = _relative_to_book(Path(state["book_dir"]), output)
         if not output.is_file():
             raise ValueError(f"completed image does not exist: {output}")
-        image_validation = _validate_image_file(output, job.get("declared_aspect_ratio"))
+        expected_canvas = job.get("expected_canvas")
+        expected_canvas_tuple = (
+            tuple(expected_canvas)
+            if isinstance(expected_canvas, list) and len(expected_canvas) == 2
+            else None
+        )
+        image_validation = _validate_image_file(
+            output,
+            job.get("declared_aspect_ratio"),
+            expected_canvas_tuple,
+        )
         job.update(
             {
                 "status": "completed",
@@ -1286,6 +1708,13 @@ def complete_job(
                 "last_error": None,
             }
         )
+        if _visual_review_gate_enabled(state):
+            job["visual_review"] = {
+                "status": "pending",
+                "reviewer_type": None,
+                "evidence": None,
+                "recorded_at": None,
+            }
         if request is not None:
             _update_request_record(
                 state,
@@ -1308,6 +1737,161 @@ def complete_job(
         )
         _save_queue(queue_path, state)
         return copy.deepcopy(job)
+
+
+def record_visual_review(
+    queue_path: str | Path,
+    page: int,
+    status: str,
+    *,
+    evidence: str | None = None,
+    reviewer_type: str = "external",
+) -> dict[str, Any]:
+    """Record one page visual-review result without claiming to infer pixels."""
+    normalized = str(status).strip().lower()
+    if normalized not in {"pending", "passed", "failed"}:
+        raise ValueError("visual review status must be pending, passed, or failed")
+    reviewer = str(reviewer_type).strip() or "external"
+    note = None if evidence is None else str(evidence).strip()
+    if normalized in {"passed", "failed"} and not note:
+        raise ValueError("visual review evidence is required for a terminal result")
+    queue_path = Path(queue_path).resolve()
+    with _queue_mutation_lock(queue_path):
+        state = _load_queue(queue_path)
+        if not _visual_review_gate_enabled(state):
+            raise RuntimeError("VISUAL_REVIEW_GATE_DISABLED")
+        job = _job(state, page)
+        if job.get("status") not in DONE_STATUSES:
+            raise RuntimeError(f"page {page} must be completed before visual review")
+        review = {
+            "status": normalized,
+            "reviewer_type": reviewer,
+            "evidence": note,
+            "recorded_at": _now(),
+        }
+        job["visual_review"] = review
+        job["updated_at"] = _now()
+        _append_event(
+            state,
+            "visual_review_recorded",
+            page,
+            status=normalized,
+            reviewer_type=reviewer,
+            evidence=note,
+            **_page_event_fields(job),
+        )
+        _save_queue(queue_path, state)
+        return copy.deepcopy(job)
+
+
+def _page_lifecycle_state(state: dict[str, Any], job: dict[str, Any], request: dict[str, Any] | None) -> str:
+    """Derive one human-readable state without creating a second state machine."""
+    request_state = request.get("terminal_state") if isinstance(request, dict) else None
+    if request_state in {"pending_unknown", "timed_out"}:
+        return "unknown_request"
+    queue_status = str(job.get("status"))
+    if queue_status in {"pending", "retryable"}:
+        return "pending"
+    if queue_status == "running":
+        return "running"
+    if queue_status == "failed":
+        return "failed"
+    if queue_status in DONE_STATUSES:
+        if _visual_review_gate_enabled(state):
+            review = job.get("visual_review")
+            if isinstance(review, dict) and review.get("status") == "passed":
+                return "visual_review_passed"
+            return "candidate_pending_review"
+        return "completed_unreviewed"
+    return "unknown_queue_status"
+
+
+def _request_for_evidence(state: dict[str, Any], job: dict[str, Any]) -> dict[str, Any] | None:
+    """Read the current request without mutating legacy queue state."""
+    request_id = job.get("current_request_id")
+    records = state.get("request_lifecycle")
+    if not isinstance(request_id, str) or not request_id.strip() or not isinstance(records, list):
+        return None
+    return next(
+        (copy.deepcopy(record) for record in records if isinstance(record, dict) and record.get("request_id") == request_id),
+        None,
+    )
+
+
+def _request_evidence_summary(request: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(request, dict):
+        return None
+    fields = (
+        "request_id",
+        "terminal_state",
+        "submission_observed",
+        "backend_task_id",
+        "reference_submission",
+        "prompt_submission",
+        "failure_code",
+        "recovery_of_request_id",
+        "recovery_approval",
+    )
+    return {field: copy.deepcopy(request.get(field)) for field in fields}
+
+
+def page_evidence(queue_path: str | Path, page: int) -> dict[str, Any]:
+    """Return one read-only page-level evidence projection.
+
+    Queue job status, request lifecycle, artifact metadata, and visual review
+    remain the sources of truth.  This view only assembles them so callers do
+    not need to reconcile several records or infer approval from a file path.
+    """
+    state = _load_queue(Path(queue_path).resolve())
+    job = _job(state, page)
+    request = _request_for_evidence(state, job)
+    limits: list[str] = []
+    if request is None:
+        limits.append("request lifecycle evidence is unavailable for this page")
+    else:
+        reference = request.get("reference_submission")
+        if isinstance(reference, dict) and reference.get("status") != "observed":
+            limits.append("reference host receipt was not observed")
+        prompt = request.get("prompt_submission")
+        if isinstance(prompt, dict) and prompt.get("status") != "observed_and_validated":
+            limits.append("exact host prompt receipt was not observed")
+        if request.get("terminal_state") in {"pending_unknown", "timed_out"}:
+            limits.append("request state is unknown and requires explicit recovery")
+    visual_review = copy.deepcopy(job.get("visual_review")) if isinstance(job.get("visual_review"), dict) else None
+    if _visual_review_gate_enabled(state) and not isinstance(visual_review, dict):
+        limits.append("visual review record is unavailable")
+    if visual_review and visual_review.get("status") != "passed":
+        limits.append("visual review has not passed")
+    limits.append("user final approval remains pending")
+    return {
+        "page": int(job["page"]),
+        "page_id": job.get("page_id") or f"PAGE-{int(job['page']):02d}",
+        "page_version": job.get("page_version") or UNKNOWN,
+        "revision": int(job.get("revision", 1)),
+        "lifecycle_state": _page_lifecycle_state(state, job, request),
+        "queue_status": job.get("status"),
+        "inputs": {
+            "prompt_path": job.get("prompt_path") or job.get("current_prompt_path"),
+            "character_reference_path": job.get("character_reference_path"),
+            "production_reference_path": job.get("production_reference_path"),
+        },
+        "request": _request_evidence_summary(request),
+        "artifact": {
+            "path": job.get("output_path"),
+            "sha256": job.get("output_sha256"),
+            "image_validation": copy.deepcopy(job.get("image_validation")),
+        },
+        "visual_review": visual_review,
+        "human_approval": "pending",
+        "evidence_limits": limits,
+    }
+
+
+def page_evidence_all(queue_path: str | Path) -> list[dict[str, Any]]:
+    """Return page evidence in queue order without changing queue state."""
+    resolved = Path(queue_path).resolve()
+    state = _load_queue(resolved)
+    return [page_evidence(resolved, int(job["page"])) for job in state["jobs"]]
 
 
 def fail_job(
@@ -1362,12 +1946,29 @@ def mark_request_submitted(
     request_id: str,
     *,
     backend_task_id: str | None = None,
+    reference_evidence: dict[str, Any] | None = None,
+    prompt_text: str | None = None,
 ) -> dict[str, Any]:
     """Record observed local submission without inventing a backend task ID."""
     queue_path = Path(queue_path).resolve()
     with _queue_mutation_lock(queue_path):
         state = _load_queue(queue_path)
         record = _request_record(state, request_id)
+        job = _job(state, int(record["page"]))
+        prompt_submission = copy.deepcopy(record.get("prompt_submission", {}))
+        if prompt_text is not None:
+            if not isinstance(prompt_text, str) or not prompt_text.strip():
+                raise ValueError("prompt_text must be a non-empty string")
+            validate_host_prompt(job.get("page_task", {}), prompt_text)
+            prompt_submission.update(
+                {
+                    "status": "observed_and_validated",
+                    "host_evidence": {
+                        "sha256": hashlib.sha256(prompt_text.encode("utf-8")).hexdigest(),
+                        "validation": "outfit_lock_passed",
+                    },
+                }
+            )
         backend = str(backend_task_id).strip() if backend_task_id is not None else UNKNOWN
         if not backend:
             backend = UNKNOWN
@@ -1375,14 +1976,48 @@ def mark_request_submitted(
             current_backend = record.get("backend_task_id", UNKNOWN)
             if current_backend not in {UNKNOWN, backend} and backend != UNKNOWN:
                 raise ValueError("backend_task_id conflicts with the existing submission record")
+            if reference_evidence is not None:
+                if not isinstance(reference_evidence, dict):
+                    raise ValueError("reference_evidence must be an object")
+                record["reference_submission"] = {
+                    **copy.deepcopy(record.get("reference_submission", {})),
+                    "status": "observed",
+                    "host_evidence": copy.deepcopy(reference_evidence),
+                }
+                _append_event(
+                    state,
+                    "reference_evidence_recorded",
+                    record.get("page"),
+                    request_id=request_id,
+                    reference_submission=copy.deepcopy(record["reference_submission"]),
+                )
+            if prompt_text is not None:
+                record["prompt_submission"] = prompt_submission
+                _append_event(
+                    state,
+                    "prompt_evidence_recorded",
+                    record.get("page"),
+                    request_id=request_id,
+                    prompt_submission=copy.deepcopy(prompt_submission),
+                )
+            if reference_evidence is not None or prompt_text is not None:
+                _save_queue(queue_path, state)
             if current_backend == backend or backend == UNKNOWN:
                 return copy.deepcopy(record)
+        reference_submission = copy.deepcopy(record.get("reference_submission", {}))
+        if reference_evidence is not None:
+            if not isinstance(reference_evidence, dict):
+                raise ValueError("reference_evidence must be an object")
+            reference_submission["status"] = "observed"
+            reference_submission["host_evidence"] = copy.deepcopy(reference_evidence)
         result = _update_request_record(
             state,
             request_id,
             "request_submitted",
             submission_observed=True,
             backend_task_id=backend,
+            reference_submission=reference_submission,
+            prompt_submission=prompt_submission,
         )
         _save_queue(queue_path, state)
         return result
@@ -1657,11 +2292,14 @@ def reset_page(queue_path: str | Path, page: int, reason: str) -> dict[str, Any]
 def status(queue_path: str | Path) -> dict[str, Any]:
     state = _load_queue(Path(queue_path).resolve())
     counts = {key: 0 for key in ("pending", "running", "retryable", "failed", "completed", "cached")}
+    lifecycle_counts: dict[str, int] = {}
     attempts = 0
     elapsed_ms = 0
     for job in state["jobs"]:
         status_name = str(job.get("status"))
         counts[status_name] = counts.get(status_name, 0) + 1
+        lifecycle_state = _page_lifecycle_state(state, job, _request_for_evidence(state, job))
+        lifecycle_counts[lifecycle_state] = lifecycle_counts.get(lifecycle_state, 0) + 1
         attempts += int(job.get("attempts", 0))
         if isinstance(job.get("elapsed_ms"), int):
             elapsed_ms += int(job["elapsed_ms"])
@@ -1673,6 +2311,7 @@ def status(queue_path: str | Path) -> dict[str, Any]:
         "page_count": state["page_count"],
         "max_in_flight": state["max_in_flight"],
         "counts": counts,
+        "lifecycle_counts": lifecycle_counts,
         "attempts": attempts,
         "failure_events": failures,
         "retry_events": sum(1 for event in state.get("events", []) if event.get("event") == "failed" and event.get("retryable")),
@@ -1689,14 +2328,36 @@ def _parser() -> argparse.ArgumentParser:
     init.add_argument("queue_json", type=Path)
     init.add_argument("--max-in-flight", type=int, default=DEFAULT_MAX_IN_FLIGHT)
     init.add_argument("--max-attempts", type=int, default=DEFAULT_MAX_ATTEMPTS)
+    init.add_argument(
+        "--standalone-legacy",
+        action="store_true",
+        help="allow a low-level queue without a project.json contract",
+    )
+    init.add_argument(
+        "--require-visual-review",
+        action="store_true",
+        help="require one recorded passed visual review before each later page claim",
+    )
     status_parser = subparsers.add_parser("status")
     status_parser.add_argument("queue_json", type=Path)
+    evidence_parser = subparsers.add_parser(
+        "evidence",
+        help="read one unified page evidence projection without changing the queue",
+    )
+    evidence_parser.add_argument("queue_json", type=Path)
+    evidence_parser.add_argument("--page", type=int)
     claim = subparsers.add_parser("claim")
     claim.add_argument("queue_json", type=Path)
     claim.add_argument("--page", type=int, required=True)
+    claim.add_argument("--authorization-id")
     batch = subparsers.add_parser("claim-batch", help="atomically claim a bounded group of pages")
     batch.add_argument("queue_json", type=Path)
     batch.add_argument("--pages", type=int, nargs="+", required=True)
+    batch.add_argument("--authorization-id")
+    generation_authorize = subparsers.add_parser("authorize-generation")
+    generation_authorize.add_argument("queue_json", type=Path)
+    generation_authorize.add_argument("--approval", required=True)
+    generation_authorize.add_argument("--max-calls", type=int, default=1)
     complete = subparsers.add_parser("complete")
     complete.add_argument("queue_json", type=Path)
     complete.add_argument("--page", type=int, required=True)
@@ -1717,6 +2378,14 @@ def _parser() -> argparse.ArgumentParser:
     submitted.add_argument("queue_json", type=Path)
     submitted.add_argument("--request-id", required=True)
     submitted.add_argument("--backend-task-id")
+    submitted.add_argument("--reference-evidence-json", type=Path)
+    submitted.add_argument("--prompt-file", type=Path)
+    review = subparsers.add_parser("visual-review")
+    review.add_argument("queue_json", type=Path)
+    review.add_argument("--page", type=int, required=True)
+    review.add_argument("--status", choices=("pending", "passed", "failed"), required=True)
+    review.add_argument("--evidence")
+    review.add_argument("--reviewer-type", default="external")
     timeout = subparsers.add_parser("timeout-request")
     timeout.add_argument("queue_json", type=Path)
     timeout.add_argument("--request-id", required=True)
@@ -1742,13 +2411,32 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         if args.command == "init":
-            result = init_queue(args.book_dir, args.queue_json, max_in_flight=args.max_in_flight, max_attempts=args.max_attempts)
+            result = init_queue(
+                args.book_dir,
+                args.queue_json,
+                max_in_flight=args.max_in_flight,
+                max_attempts=args.max_attempts,
+                allow_standalone_legacy=args.standalone_legacy,
+                require_visual_review=args.require_visual_review,
+            )
         elif args.command == "status":
             result = status(args.queue_json)
+        elif args.command == "evidence":
+            if args.page is None:
+                state = _load_queue(args.queue_json.resolve())
+                result = {
+                    "queue_id": state["queue_id"],
+                    "page_count": state["page_count"],
+                    "pages": page_evidence_all(args.queue_json),
+                }
+            else:
+                result = page_evidence(args.queue_json, args.page)
         elif args.command == "claim":
-            result = claim_job(args.queue_json, args.page)
+            result = claim_job(args.queue_json, args.page, authorization_id=args.authorization_id)
         elif args.command == "claim-batch":
-            result = claim_batch(args.queue_json, args.pages)
+            result = claim_batch(args.queue_json, args.pages, authorization_id=args.authorization_id)
+        elif args.command == "authorize-generation":
+            result = authorize_generation(args.queue_json, approval=args.approval, max_calls=args.max_calls)
         elif args.command == "complete":
             result = complete_job(args.queue_json, args.page, args.output, elapsed_ms=args.elapsed_ms)
         elif args.command == "fail":
@@ -1758,7 +2446,23 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "reset-page":
             result = reset_page(args.queue_json, args.page, args.reason)
         elif args.command == "mark-submitted":
-            result = mark_request_submitted(args.queue_json, args.request_id, backend_task_id=args.backend_task_id)
+            evidence = _read_json(args.reference_evidence_json) if args.reference_evidence_json else None
+            prompt_text = args.prompt_file.read_text(encoding="utf-8") if args.prompt_file else None
+            result = mark_request_submitted(
+                args.queue_json,
+                args.request_id,
+                backend_task_id=args.backend_task_id,
+                reference_evidence=evidence,
+                prompt_text=prompt_text,
+            )
+        elif args.command == "visual-review":
+            result = record_visual_review(
+                args.queue_json,
+                args.page,
+                args.status,
+                evidence=args.evidence,
+                reviewer_type=args.reviewer_type,
+            )
         elif args.command == "timeout-request":
             result = mark_request_timeout(
                 args.queue_json,

@@ -19,6 +19,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from asset_hashing import file_hash, matches_file_hash
+
 
 APPROVED_REFERENCE_IDS = (
     "G-ID-01",
@@ -36,10 +38,6 @@ FORMAL_RELEASE_STATUS = ("released", "released", True)
 def canonical_hash(value: object) -> str:
     payload = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
-
-
-def file_hash(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _json(path: Path) -> dict[str, Any]:
@@ -73,6 +71,15 @@ def _files_hashes(bundle_root: Path) -> dict[str, str]:
         for path in sorted(bundle_root.rglob("*"))
         if path.is_file() and path.name != "manifest-receipt.json"
     }
+
+
+def _receipt_files_match(bundle_root: Path, received: Any) -> bool:
+    if not isinstance(received, dict):
+        return False
+    expected_paths = set(_files_hashes(bundle_root))
+    if set(received) != expected_paths:
+        return False
+    return all(matches_file_hash(bundle_root / relative, digest) for relative, digest in received.items())
 
 
 def _safe_relative_path(value: Any) -> bool:
@@ -192,11 +199,11 @@ def _validate_staged_receipt(
         return
     if receipt.get("bundle_id") != manifest.get("bundle_id") or receipt.get("version") != manifest.get("version"):
         _error(result, "STAGED_RECEIPT_INVALID", "staged receipt identity does not match manifest")
-    expected_files = _files_hashes(bundle_root)
-    if receipt.get("files") != expected_files:
+    if not _receipt_files_match(bundle_root, receipt.get("files")):
         _error(result, "STAGED_RECEIPT_INVALID", "staged receipt file hashes do not match candidate contents")
     manifest_path = bundle_root / "manifest.json"
-    if receipt.get("manifest_sha256") != canonical_hash(manifest) or receipt.get("manifest_bytes_sha256") != file_hash(manifest_path):
+    if (receipt.get("manifest_sha256") != canonical_hash(manifest) or
+            not matches_file_hash(manifest_path, receipt.get("manifest_bytes_sha256", ""))):
         _error(result, "STAGED_RECEIPT_INVALID", "staged receipt manifest hashes do not match candidate")
     if receipt.get("receipt_sha256") != canonical_hash({k: v for k, v in receipt.items() if k != "receipt_sha256"}):
         _error(result, "STAGED_RECEIPT_INVALID", "staged receipt self-hash is invalid")
@@ -335,20 +342,23 @@ def verify_published_bundle(
     if receipt.get("bundle_id") != manifest.get("bundle_id") or receipt.get("version") != manifest.get("version"):
         _error(result, "RECEIPT_IDENTITY_MISMATCH", "formal receipt identity does not match manifest")
     expected_files = _files_hashes(bundle_root)
-    if receipt.get("files") != expected_files:
+    if not _receipt_files_match(bundle_root, receipt.get("files")):
         _error(result, "RECEIPT_FILE_HASH_MISMATCH", "formal receipt file hashes do not match published contents")
     manifest_path = bundle_root / "manifest.json"
     approval_path = bundle_root / "approval.json"
-    if receipt.get("manifest_sha256") != canonical_hash(manifest) or receipt.get("manifest_bytes_sha256") != file_hash(manifest_path):
+    if (receipt.get("manifest_sha256") != canonical_hash(manifest) or
+            not matches_file_hash(manifest_path, receipt.get("manifest_bytes_sha256", ""))):
         _error(result, "RECEIPT_MANIFEST_HASH_MISMATCH", "formal receipt manifest hashes do not match")
-    if receipt.get("approval_sha256") != canonical_hash(approval) or receipt.get("approval_bytes_sha256") != file_hash(approval_path):
+    if (receipt.get("approval_sha256") != canonical_hash(approval) or
+            not matches_file_hash(approval_path, receipt.get("approval_bytes_sha256", ""))):
         _error(result, "RECEIPT_APPROVAL_HASH_MISMATCH", "formal receipt approval hashes do not match")
+    receipt_files = receipt.get("files") if isinstance(receipt.get("files"), dict) else expected_files
     expected_content = canonical_hash({
         "bundle_id": manifest.get("bundle_id"),
         "version": manifest.get("version"),
         "manifest_sha256": canonical_hash(manifest),
         "approval_sha256": canonical_hash(approval),
-        "files": expected_files,
+        "files": receipt_files,
     })
     if receipt.get("content_sha256") != expected_content:
         _error(result, "RECEIPT_CONTENT_HASH_MISMATCH", "formal receipt content hash does not match")

@@ -675,3 +675,54 @@ class SkillGuidanceTests(unittest.TestCase):
 
         self.assertIn("baseline", rubric)
         self.assertIn("不能把 baseline 结果", rubric)
+
+    def test_phase1_default_flow_is_single_and_explicitly_branched(self) -> None:
+        skill = read("SKILL.md")
+        workflow = read("references/production-workflow.md")
+        combined = "\n".join((skill, workflow))
+
+        for term in (
+            "第一阶段最短路径",
+            "输入契约 → 知识门禁 → 故事/整本分镜 → 资产锁定",
+            "一次整本 strict 预检",
+            "一页一次轻量检查",
+            "默认不进入 PDF、打印、社媒渲染、历史迁移",
+            "按需分支",
+            "历史兼容分支",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, combined)
+
+    def test_phase1_resume_path_reads_minimum_context_and_has_replan_triggers(self) -> None:
+        workflow = read("references/production-workflow.md")
+        for term in (
+            "续做最小读取集",
+            "项目摘要",
+            "当前页任务",
+            "有效预检回执",
+            "当前页队列状态",
+            "研究内容、年龄档、故事、页数",
+            "单页提示词或单页资产变化只使当前页失效",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, workflow)
+
+    def test_phase1_module_ownership_is_explicit(self) -> None:
+        combined = "\n".join(
+            read(path)
+            for path in (
+                "SKILL.md",
+                "references/production-workflow.md",
+            )
+        )
+        for term in (
+            "项目契约",
+            "knowledge whitelist",
+            "asset registry",
+            "page manifest",
+            "generation queue",
+            "delivery manifest",
+            "review/acceptance",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, combined)

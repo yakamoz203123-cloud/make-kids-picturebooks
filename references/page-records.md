@@ -16,6 +16,8 @@
 
 完成页必须填写 manifest continuity fields：`previous_page_state`、`current_page_entry` 和 `next_page_hook` 都是且仅是 `{"state_id":"稳定状态标识","summary":"可核对的本页状态说明"}`；相邻页中前页 `next_page_hook.state_id` 必须等于后页 `current_page_entry.state_id`。`text_image_match` 和 `continuity_review` 都是且仅是 `{"status":"pending|passed|failed","evidence":"实际观察的证据"}`。规划时可用 pending 与空证据；成书前必须为 passed 并填写实际证据，不添加其他字段，不改 schema_version。
 
+页面失败保留机器可读 failure code，例如 `MISSING_ASSET`、`REFERENCE_NOT_FOUND`、`INVALID_DIMENSIONS`、`ASPECT_RATIO_MISMATCH` 和 `GENERATION_FAILED`；失败码不能替代人工审核结论。
+
 知识检查为 pending（待检查）、passed（通过）或 failed（失败），证据填写实际看到的动作、对象与对应条件，可关联检查图片。封面及说明页写明不新增知识动作、文字条件审核结果。无插画说明页仍记录排版提示，完成时可将最终页面渲染图作为检查图；它不充当故事插画。
 
 使用 Research 输入包时，每页另存 `knowledge_claims`（来自 `knowledge-whitelist.json` 的 claim ID）和 `science_visual_checks`。`knowledge_claims` 不得包含 `uncertain`、`pending_confirmation` 或 `omit`；推论必须保持推论身份。`science_visual_checks` 至少写清 claim、必须看到的结构/顺序/条件、状态和实际画面证据，不能只写“科学正确”。故事全文另存逐句 story-claim trace，并在进入正式分镜前通过 `content_gate.py validate-story`。

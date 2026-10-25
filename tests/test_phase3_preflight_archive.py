@@ -117,13 +117,27 @@ def _fixture(tmp_path: Path, *, with_images: bool = False) -> Path:
     storyboard = {"schema_version": 1, "book_id": "test-book-b01", "version": "v1", "title": "测试小书", "age_band": "3-4", "pages": pages}
     _write_json(content / "storyboard.json", storyboard)
     manifest = {"schema_version": 1, "book_id": "test-book-b01", "age_band": "3-4", "research_packet_path": "../../../research", "knowledge_whitelist_path": "../review/knowledge-whitelist.json", "story_claim_trace_path": "../review/story-claim-trace.json", "pages": pages}
+    manifest["science_visual_consistency"] = {
+        "status": "passed",
+        "checks": ["单一观察对象按科学顺序连续变化"],
+    }
     _write_json(content / "page-manifest.json", manifest)
     _write_json(content / "page-text.json", {"pages": [{"page": 1, "text": pages[0]["text"]}]})
     _write_json(content / "layout.json", {"pages": [{"page": 1, "style_version": "v0.1"}]})
     _write_json(content / "education-goal.json", {"book_id": "test-book-b01", "goal": "observe"})
     _write_json(content / "asset-binding-plan.json", {"user_selected_assets": {"character_formal_production_approval": "approved", "style_formal_production_approval": "approved", "style_status": "approved"}})
     _write_json(book / "review" / "knowledge-whitelist.json", {"claims": {}})
-    _write_json(book / "review" / "story-claim-trace.json", {"pages": []})
+    _write_json(
+        book / "review" / "story-claim-trace.json",
+        [
+            {
+                "sentence_id": "sentence-01",
+                "text": "小熊看见一颗种子。",
+                "kind": "fictional_story",
+                "claim_ids": [],
+            }
+        ],
+    )
     if with_images:
         image_dir = content / "images"
         image_dir.mkdir(parents=True, exist_ok=True)
@@ -140,6 +154,54 @@ def test_pre_generation_allows_missing_images_and_does_not_write_queue(tmp_path:
     assert result["status"] == "passed"
     assert result["write_operations"] == 0
     assert not list(root.rglob("production-queue.json"))
+
+
+def test_pre_generation_reports_complete_production_dependency_closure(tmp_path: Path) -> None:
+    root = _fixture(tmp_path, with_images=False)
+    result = preflight_project(root, "b01", version="v1", phase="pre_generation", mode="strict")
+    closure = result["production_dependency_closure"]
+    assert closure["status"] == "passed"
+    assert closure["profile"] == "production-ready"
+    assert closure["missing"] == []
+    assert closure["outside_book"] == []
+
+
+def test_pre_generation_blocks_missing_manifest_content_gate(tmp_path: Path) -> None:
+    root = _fixture(tmp_path, with_images=False)
+    manifest_path = root / "books" / "b01" / "v1" / "content" / "page-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest.pop("science_visual_consistency")
+    _write_json(manifest_path, manifest)
+
+    result = preflight_project(root, "b01", version="v1", phase="pre_generation", mode="strict")
+
+    assert result["status"] == "blocked"
+    assert "CONTENT_GATE:manifest:missing_storyboard_science_review" in result["blockers"]
+
+
+def test_pre_generation_blocks_missing_production_dependencies_with_field_context(tmp_path: Path) -> None:
+    root = _fixture(tmp_path, with_images=False)
+    book = root / "books" / "b01" / "v1" / "content"
+    (book / "prompts" / "page-01.md").unlink()
+    (book / "characters" / "core-v1.3" / "reference" / "ref.png").unlink()
+
+    result = preflight_project(root, "b01", version="v1", phase="pre_generation", mode="strict")
+    closure = result["production_dependency_closure"]
+    assert closure["status"] == "blocked"
+    assert any("PRODUCTION_DEPENDENCY_MISSING:page=1:field=current_prompt_path" in item for item in result["blockers"])
+    assert any("PRODUCTION_DEPENDENCY_MISSING:page=1:field=character_reference_path" in item for item in result["blockers"])
+
+
+def test_delivery_only_profile_is_not_production_ready(tmp_path: Path) -> None:
+    root = _fixture(tmp_path, with_images=False)
+    project_path = root / "project.json"
+    project = json.loads(project_path.read_text(encoding="utf-8"))
+    project["project_profile"] = "delivery-only"
+    _write_json(project_path, project)
+
+    result = preflight_project(root, "b01", version="v1", phase="pre_generation", mode="strict")
+    assert result["production_dependency_closure"]["profile"] == "delivery-only"
+    assert "PROJECT_PROFILE_NOT_PRODUCTION_READY" in result["blockers"]
 
 
 def test_pre_delivery_blocks_missing_formal_image(tmp_path: Path) -> None:

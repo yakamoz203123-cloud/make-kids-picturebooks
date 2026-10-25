@@ -26,11 +26,14 @@ from build_pure_image_delivery import (
     _source_image,
 )
 from continuity_contract import validate_continuity_invariants
+from content_gate import validate_page_manifest_science, validate_story_claims
 from generation_queue import _plan
+from project_bundle import validate_production_dependencies
 from validate_page_manifest import validate_page_manifest
 
 
 SCHEMA_VERSION = 1
+WORKFLOW_RULES_VERSION = "workflow-gates-v1"
 MODES = {"report-only", "strict"}
 PHASES = {"pre_generation", "pre_delivery"}
 AGES = {"3-4", "5-7", "8-10", "5-6"}
@@ -293,6 +296,94 @@ def _research_check(
     return blockers, warnings, evidence
 
 
+def _content_gate_check(
+    *,
+    root: Path,
+    book_dir: Path,
+    content_dir: Path,
+    manifest: Mapping[str, Any],
+    project_data: Mapping[str, Any],
+    layout: str,
+    production_profile: str | None,
+) -> tuple[list[str], list[str], list[dict[str, Any]]]:
+    """Run declared story and page-manifest content gates without writing files."""
+
+    blockers: list[str] = []
+    warnings: list[str] = []
+    evidence: list[dict[str, Any]] = []
+    whitelist_path = _resolve_local_reference(
+        manifest.get("knowledge_whitelist_path"),
+        book_dir=book_dir,
+        content_dir=content_dir,
+        root=root,
+    )
+    trace_path = _resolve_local_reference(
+        manifest.get("story_claim_trace_path"),
+        book_dir=book_dir,
+        content_dir=content_dir,
+        root=root,
+    )
+    pages = manifest.get("pages")
+    has_page_science = isinstance(pages, list) and any(
+        isinstance(page, Mapping)
+        and (isinstance(page.get("knowledge_claims"), list) or isinstance(page.get("science_visual_checks"), list))
+        for page in pages
+    )
+    source = project_data.get("source")
+    has_research_intent = (
+        _nonempty(manifest.get("research_packet_path"))
+        or (isinstance(source, Mapping) and _nonempty(source.get("path")))
+        or has_page_science
+    )
+    if production_profile == "production-ready" and has_research_intent and (
+        not _nonempty(manifest.get("knowledge_whitelist_path"))
+        or not _nonempty(manifest.get("story_claim_trace_path"))
+    ):
+        blockers.append("CONTENT_GATE:input:research_references_undeclared")
+        evidence.append(
+            {
+                "kind": "content_gate",
+                "source": "input",
+                "status": "blocked",
+                "error_codes": ["research_references_undeclared"],
+                "errors": ["Research 白名单和 story trace 必须在 page-manifest.json 中声明"],
+            }
+        )
+        return blockers, warnings, evidence
+    if not whitelist_path or not trace_path or not whitelist_path.is_file() or not trace_path.is_file():
+        return blockers, warnings, evidence
+
+    story_candidates = [content_dir / "story.md", book_dir / "story.md"]
+    story_path = next((path for path in story_candidates if path.is_file()), None)
+    if story_path is None:
+        return blockers, warnings, evidence
+    try:
+        story_text = story_path.read_text(encoding="utf-8")
+        trace = json.loads(trace_path.read_text(encoding="utf-8"))
+        whitelist = json.loads(whitelist_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        blockers.append(f"CONTENT_GATE:input:invalid:{exc}")
+        return blockers, warnings, evidence
+
+    story_report = validate_story_claims(story_text, trace, whitelist)
+    manifest_report = validate_page_manifest_science(dict(manifest), whitelist)
+    for kind, report in (("story", story_report), ("manifest", manifest_report)):
+        evidence.append(
+            {
+                "kind": "content_gate",
+                "source": kind,
+                "status": report.get("status"),
+                "error_codes": list(report.get("error_codes", [])),
+                "errors": list(report.get("errors", [])),
+            }
+        )
+        for code in report.get("error_codes", []):
+            blockers.append(f"CONTENT_GATE:{kind}:{code}")
+        for warning in report.get("warnings", []):
+            warnings.append(f"CONTENT_GATE:{kind}:{warning}")
+    return blockers, warnings, evidence
+
+
 def _path_safety_check(*, root: Path, book_dir: Path, content_dir: Path, pages: Mapping[int, Mapping[str, Any]]) -> tuple[list[str], list[dict[str, Any]]]:
     blockers: list[str] = []
     evidence: list[dict[str, Any]] = []
@@ -315,7 +406,7 @@ def _review_status_check(book_dir: Path, pages: Mapping[int, Mapping[str, Any]])
     evidence: list[dict[str, Any]] = []
     review_path = book_dir / "review" / "review.json"
     if not review_path.is_file():
-        warnings.append("HUMAN_REVIEW_RECORD_MISSING")
+        blockers.append("HUMAN_REVIEW_RECORD_MISSING")
         return blockers, warnings, evidence
     try:
         review = _read_json(review_path)
@@ -328,7 +419,7 @@ def _review_status_check(book_dir: Path, pages: Mapping[int, Mapping[str, Any]])
         if row and str(row.get("status", "")).lower() in {"failed", "generation_failed_timeout", "not_reviewable"}:
             blockers.append(f"PAGE_REVIEW_NOT_COMPLETE:{number}")
     if review.get("user_final_approval") not in {True, "approved", "approved_for_formal_use"}:
-        warnings.append("HUMAN_FINAL_APPROVAL_NOT_ASSERTED")
+        blockers.append("HUMAN_FINAL_APPROVAL_NOT_ASSERTED")
     evidence.append({"kind": "review", "path": str(review_path), "status": review.get("overall_status", "unknown")})
     return blockers, warnings, evidence
 
@@ -414,7 +505,11 @@ def _delivery_fingerprint(root: Path, book_dir: Path, contract: Any, records: li
                 "input_hashes": contract.input_hashes,
             },
             "pages": [
-                {"page": item["page"], "source_sha256": item["sha256"], "source_size": item["size"]}
+                {
+                    "page": item["page"],
+                    "source_sha256": item["sha256"],
+                    "source_size": item["size"],
+                }
                 for item in records
             ],
         }
@@ -448,10 +543,13 @@ def preflight_project(
         "business_book_id": None,
         "age_band": None,
         "page_count": None,
+        "plan_fingerprint": None,
+        "workflow_rules_version": WORKFLOW_RULES_VERSION,
         "passed": [],
         "warnings": [],
         "blockers": [],
         "evidence": [],
+        "production_dependency_closure": None,
         "fix_advice": [],
         "write_operations": 0,
         "image_model_calls": 0,
@@ -576,6 +674,40 @@ def preflight_project(
     if not path_blocks:
         passed("project_path_safety")
 
+    dependency_closure = validate_production_dependencies(
+        book_dir=book_dir,
+        content_dir=content_dir,
+        root=root,
+        pages=manifest_pages,
+        manifest=manifest,
+        project_data=project_data,
+        phase=phase,
+    )
+    report["production_dependency_closure"] = dependency_closure
+    report["warnings"].extend(dependency_closure["warnings"])
+    report["evidence"].append({"kind": "production_dependency_closure", **dependency_closure})
+    for item in dependency_closure["missing"]:
+        if item.get("page") is None:
+            report["blockers"].append(f"PRODUCTION_DEPENDENCY_MISSING:scope={item['scope']}:field={item['field']}")
+        else:
+            report["blockers"].append(f"PRODUCTION_DEPENDENCY_MISSING:page={item['page']}:field={item['field']}")
+    for item in dependency_closure["outside_book"]:
+        if item.get("page") is None:
+            report["blockers"].append(f"PRODUCTION_DEPENDENCY_OUTSIDE_BOOK:scope={item['scope']}:field={item['field']}")
+        else:
+            report["blockers"].append(f"PRODUCTION_DEPENDENCY_OUTSIDE_BOOK:page={item['page']}:field={item['field']}")
+    for warning in dependency_closure["warnings"]:
+        if warning.startswith("PROJECT_PROFILE_UNKNOWN:"):
+            report["blockers"].append(warning)
+    if dependency_closure["profile"] == "delivery-only" and phase == "pre_generation":
+        report["blockers"].append("PROJECT_PROFILE_NOT_PRODUCTION_READY")
+    if dependency_closure["status"] == "passed" and dependency_closure["profile"] != "delivery-only":
+        passed(
+            "production_dependency_closure",
+            profile=dependency_closure["profile"],
+            required_count=len(dependency_closure["required"]),
+        )
+
     asset_plan_path = content_dir / "asset-binding-plan.json"
     try:
         asset_plan = _read_json(asset_plan_path) if asset_plan_path.is_file() else None
@@ -608,6 +740,21 @@ def preflight_project(
     if not research_blocks:
         passed("research_traceability", warnings=research_warnings)
 
+    content_blocks, content_warnings, content_evidence = _content_gate_check(
+        root=root,
+        book_dir=book_dir,
+        content_dir=content_dir,
+        manifest=manifest,
+        project_data=project_data,
+        layout=layout,
+        production_profile=dependency_closure.get("profile"),
+    )
+    report["blockers"].extend(content_blocks)
+    report["warnings"].extend(content_warnings)
+    report["evidence"].extend(content_evidence)
+    if content_evidence and not content_blocks:
+        passed("content_gate", checks=["story_claims", "page_manifest_science"])
+
     continuity_blocks: list[str] = []
     continuity_warnings: list[str] = []
     for number, page in sorted(manifest_pages.items()):
@@ -626,6 +773,7 @@ def preflight_project(
         report["blockers"].append(f"TASK_ASSEMBLY:{exc}")
     else:
         passed("page_task_assembly", page_count=plan.get("page_count"), plan_fingerprint=plan.get("plan_fingerprint"))
+        report["plan_fingerprint"] = plan.get("plan_fingerprint")
         report["evidence"].append({"kind": "plan", "page_count": plan.get("page_count"), "plan_fingerprint": plan.get("plan_fingerprint")})
 
     if phase == "pre_delivery":

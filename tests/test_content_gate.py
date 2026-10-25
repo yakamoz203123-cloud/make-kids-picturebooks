@@ -3,6 +3,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
@@ -10,10 +11,24 @@ sys.path.insert(0, str(SCRIPTS))
 
 from content_gate import (  # noqa: E402
     build_knowledge_whitelist,
+    configure_cli_encoding,
     validate_research_packet,
+    validate_page_manifest_science,
     validate_story_claims,
     validate_storyboard_science,
 )
+
+
+class _ReconfigurableStream:
+    def __init__(self):
+        self.calls = []
+
+    def reconfigure(self, **kwargs):
+        self.calls.append(kwargs)
+
+
+class _PlainStream:
+    pass
 
 
 def write_packet(root: Path, *, packet_id="demo-3-4", age_band="3-4") -> Path:
@@ -102,6 +117,27 @@ def write_packet(root: Path, *, packet_id="demo-3-4", age_band="3-4") -> Path:
 
 
 class ResearchPacketGateTests(unittest.TestCase):
+    def test_configure_cli_encoding_requests_utf8_when_stream_supports_it(self):
+        stdout = _ReconfigurableStream()
+        stderr = _ReconfigurableStream()
+        with patch("content_gate.sys.stdout", stdout), patch("content_gate.sys.stderr", stderr):
+            configure_cli_encoding()
+
+        self.assertEqual(
+            [{"encoding": "utf-8", "errors": "backslashreplace"}],
+            stdout.calls,
+        )
+        self.assertEqual(
+            [{"encoding": "utf-8", "errors": "backslashreplace"}],
+            stderr.calls,
+        )
+
+    def test_configure_cli_encoding_ignores_stream_without_reconfigure(self):
+        with patch("content_gate.sys.stdout", _PlainStream()), patch(
+            "content_gate.sys.stderr", _PlainStream()
+        ):
+            configure_cli_encoding()
+
     def test_valid_packet_passes_and_is_traceable(self):
         with tempfile.TemporaryDirectory() as td:
             report = validate_research_packet(write_packet(Path(td) / "packet"))
@@ -395,6 +431,45 @@ class StoryboardScienceTests(unittest.TestCase):
 
         self.assertEqual("blocked", report["status"])
         self.assertIn("forbidden_claim_status", report["error_codes"])
+
+    def test_manifest_science_checks_pass_without_storyboard_duplication(self):
+        with tempfile.TemporaryDirectory() as td:
+            report = validate_page_manifest_science(
+                {
+                    "pages": [
+                        {
+                            "page": 1,
+                            "knowledge_claims": ["claim-fact"],
+                            "science_visual_checks": [
+                                {
+                                    "claim_id": "claim-fact",
+                                    "required_visual_evidence": "种子变大",
+                                    "status": "passed",
+                                    "evidence": "实际画面看到种子变大",
+                                }
+                            ],
+                        }
+                    ],
+                    "science_visual_consistency": {
+                        "status": "passed",
+                        "checks": ["同一颗种子按吸水、裂开、发根顺序变化"],
+                    },
+                },
+                self._whitelist(td),
+            )
+
+        self.assertEqual("passed", report["status"])
+        self.assertEqual("page-manifest", report["source"])
+
+    def test_manifest_science_requires_whole_book_review(self):
+        with tempfile.TemporaryDirectory() as td:
+            report = validate_page_manifest_science(
+                {"pages": []},
+                self._whitelist(td),
+            )
+
+        self.assertEqual("blocked", report["status"])
+        self.assertIn("missing_storyboard_science_review", report["error_codes"])
 
 
 if __name__ == "__main__":

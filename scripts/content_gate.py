@@ -28,6 +28,21 @@ CONCEPT_OUTCOMES = {"include", "borderline", "omit"}
 TRACE_KINDS = {"scientific_claim", "observation", "inference", "dialogue", "fictional_story"}
 
 
+def configure_cli_encoding() -> None:
+    """Make human-readable JSON safe for Windows consoles using a legacy code page."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if not callable(reconfigure):
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+        except (OSError, ValueError):
+            # A host may expose a stream that advertises reconfigure but does
+            # not allow changing it. The JSON file/output contract must still
+            # remain usable by the caller.
+            continue
+
+
 def _error(code: str, message: str) -> str:
     return f"[{code}] {message}"
 
@@ -515,6 +530,17 @@ def validate_storyboard_science(
     return result
 
 
+def validate_page_manifest_science(
+    manifest: dict[str, Any],
+    whitelist: dict[str, Any],
+) -> dict[str, Any]:
+    """Validate the canonical page-manifest science evidence without copying it."""
+
+    result = validate_storyboard_science(manifest, whitelist)
+    result["source"] = "page-manifest"
+    return result
+
+
 def _write_json(path: Path, value: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -535,10 +561,14 @@ def _parser() -> argparse.ArgumentParser:
     storyboard = sub.add_parser("validate-storyboard")
     storyboard.add_argument("storyboard", type=Path)
     storyboard.add_argument("whitelist", type=Path)
+    manifest = sub.add_parser("validate-manifest")
+    manifest.add_argument("manifest", type=Path)
+    manifest.add_argument("whitelist", type=Path)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
+    configure_cli_encoding()
     args = _parser().parse_args(argv)
     if args.command == "validate-packet":
         result = validate_research_packet(args.packet_dir)
@@ -549,10 +579,14 @@ def main(argv: list[str] | None = None) -> int:
         trace = json.loads(args.trace.read_text(encoding="utf-8"))
         whitelist = json.loads(args.whitelist.read_text(encoding="utf-8"))
         result = validate_story_claims(story_text, trace, whitelist)
-    else:
+    elif args.command == "validate-storyboard":
         storyboard = json.loads(args.storyboard.read_text(encoding="utf-8"))
         whitelist = json.loads(args.whitelist.read_text(encoding="utf-8"))
         result = validate_storyboard_science(storyboard, whitelist)
+    else:
+        manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
+        whitelist = json.loads(args.whitelist.read_text(encoding="utf-8"))
+        result = validate_page_manifest_science(manifest, whitelist)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result.get("status") == "passed" else 1
 

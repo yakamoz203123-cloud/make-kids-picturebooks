@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "project_profile": "production-ready",
   "output_mode": "pure-images",
   "social_profile": "xiaohongshu-feed-3x4",
   "social_canvas": {

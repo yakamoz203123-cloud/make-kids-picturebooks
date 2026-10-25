@@ -347,3 +347,81 @@ def test_atomic_lifecycle_update_preserves_queue_when_write_is_interrupted(tmp_p
     with pytest.raises(OSError, match="interruption"):
         module.mark_request_submitted(queue, claimed["current_request_id"], backend_task_id="backend-1")
     assert queue.read_bytes() == before
+
+
+def test_page_evidence_distinguishes_pending_and_review_pending(tmp_path: Path) -> None:
+    module = load_module()
+    book, queue = make_book(tmp_path)
+    module.init_queue(book, queue, require_visual_review=True)
+
+    pending = module.page_evidence(queue, 1)
+    assert pending["lifecycle_state"] == "pending"
+    assert pending["queue_status"] == "pending"
+    assert pending["request"] is None
+
+    claimed = module.claim_job(queue, 1)
+    module.mark_request_submitted(queue, claimed["current_request_id"])
+    output = book / "images" / "page-01.png"
+    write_image(output)
+    module.complete_job(queue, 1, output)
+
+    candidate = module.page_evidence(queue, 1)
+    assert candidate["lifecycle_state"] == "candidate_pending_review"
+    assert candidate["request"]["terminal_state"] == "succeeded"
+    assert candidate["artifact"]["sha256"]
+    assert candidate["visual_review"]["status"] == "pending"
+
+
+def test_page_evidence_marks_passed_review_without_claiming_human_approval(tmp_path: Path) -> None:
+    module = load_module()
+    book, queue = make_book(tmp_path)
+    module.init_queue(book, queue, require_visual_review=True)
+    claimed = module.claim_job(queue, 1)
+    module.mark_request_submitted(queue, claimed["current_request_id"])
+    output = book / "images" / "page-01.png"
+    write_image(output)
+    module.complete_job(queue, 1, output)
+    module.record_visual_review(queue, 1, "passed", evidence="角色、动作和画面状态检查通过")
+
+    evidence = module.page_evidence(queue, 1)
+    assert evidence["lifecycle_state"] == "visual_review_passed"
+    assert evidence["visual_review"]["status"] == "passed"
+    assert evidence["human_approval"] == "pending"
+
+
+def test_page_evidence_marks_unknown_request_as_blocked(tmp_path: Path) -> None:
+    module = load_module()
+    book, queue = make_book(tmp_path)
+    module.init_queue(book, queue)
+    claimed = module.claim_job(queue, 1)
+    module.mark_request_pending_unknown(queue, claimed["current_request_id"])
+
+    evidence = module.page_evidence(queue, 1)
+    assert evidence["lifecycle_state"] == "unknown_request"
+    assert evidence["queue_status"] == "failed"
+    assert evidence["request"]["terminal_state"] == "pending_unknown"
+    assert "unknown" in " ".join(evidence["evidence_limits"])
+
+
+def test_page_evidence_reads_legacy_queue_without_request_lifecycle(tmp_path: Path) -> None:
+    module = load_module()
+    book, queue = make_book(tmp_path)
+    state = module.init_queue(book, queue)
+    state.pop("request_lifecycle", None)
+    queue.write_text(json.dumps(state), encoding="utf-8")
+
+    evidence = module.page_evidence(queue, 1)
+    assert evidence["lifecycle_state"] == "pending"
+    assert evidence["request"] is None
+    assert any("lifecycle" in item for item in evidence["evidence_limits"])
+
+
+def test_evidence_cli_returns_page_projection(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    module = load_module()
+    book, queue = make_book(tmp_path)
+    module.init_queue(book, queue)
+
+    assert module.main(["evidence", str(queue), "--page", "1"]) == 0
+    output = json.loads(capsys.readouterr().out)
+    assert output["page"] == 1
+    assert output["lifecycle_state"] == "pending"

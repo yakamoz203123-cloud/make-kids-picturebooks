@@ -562,7 +562,7 @@ def build_delivery(
             },
             "pages": [
                 {
-                    "page": record["page"],
+                    "page": int(record["page"]["page"]),
                     "source_sha256": record["source_sha256"],
                     "source_size": [record["source_width"], record["source_height"]],
                 }
@@ -669,7 +669,7 @@ def build_delivery(
         )
         recorder.finish(text_id, status="passed")
 
-        review_id = recorder.start("visual-review", task_id=book_id)
+        review_id = recorder.start("contact-sheet-generated", task_id=book_id)
         render_contact_sheet(stage / "images", stage / "contact-sheet.png", expected_pages=[int(page["page"]) for page in pages])
         recorder.finish(review_id, status="passed")
 
@@ -677,6 +677,7 @@ def build_delivery(
         validation = {
             "schema_version": SCHEMA_VERSION,
             "status": "passed",
+            "release_status": "human_review_pending",
             "output_mode": OUTPUT_MODE,
             "input_fingerprint": input_fingerprint,
             "book_id": contract.business_book_id,
