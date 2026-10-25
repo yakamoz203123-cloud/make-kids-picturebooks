@@ -475,3 +475,5 @@ git diff --check：通过（仅有 Windows 换行转换提示）
 - 克隆清理同时处理空白、非字符串、绝对路径、父目录穿越和 Windows drive-relative 路径；历史 queue 没有 `request_lifecycle` 标记时保留旧版交付兼容，不强行改写历史项目。
 
 新增边界回归覆盖：失败后补提交、完成校验失败、跨书 queue、清单先完成但 queue 未完成、以及异常图片路径。修复目标仍是极简：只在生命周期证据和交付安全边界上增加规则，不增加新的生产步骤。
+
+二次全量验证结果：`553 passed, 2 skipped, 448 subtests passed`；`python -m pip check` 通过。历史项目兼容性回归也通过，说明这次加固没有把旧项目强行纳入新生命周期。

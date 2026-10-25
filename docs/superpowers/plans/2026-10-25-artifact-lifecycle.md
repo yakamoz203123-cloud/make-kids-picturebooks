@@ -107,7 +107,8 @@
 
 ## Verification Record
 
-- Full suite: `548 passed, 2 skipped, 448 subtests passed`.
+- Initial full suite: `548 passed, 2 skipped, 448 subtests passed`.
+- Final hardened full suite: `553 passed, 2 skipped, 448 subtests passed`.
 - Dependency check: `python -m pip check` reported `No broken requirements found.`
 - Repository hygiene: `git diff --check` passed.
 - Final compatibility fix: regenerated `MANIFEST.json`; added test-module isolation so the full suite cannot accidentally reuse an older installed skill module.
