@@ -278,6 +278,15 @@ class GenerationQueueTests(unittest.TestCase):
         claimed = self.module.claim_job(self.queue, 3)
         self.assertEqual(claimed["page"], 3)
 
+    def test_complete_job_syncs_manifest_current_image_path(self):
+        self._init()
+        self._claim_and_mark_submitted(1)
+
+        self.module.complete_job(self.queue, 1, self._write_success_image(1))
+
+        manifest = json.loads((self.book / "page-manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["pages"][0]["current_image_path"], "images/page-01.png")
+
     def test_formal_profile_rejects_wrong_exact_canvas_on_completion(self):
         self._make_formal_canvas_book()
         self._init()

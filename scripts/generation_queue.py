@@ -475,6 +475,31 @@ def _relative_to_book(book_dir: Path, path: Path) -> str:
         raise ValueError(f"path must stay inside book directory: {path}") from exc
 
 
+def _sync_page_manifest_image(book_dir: Path, page: int, output_relative: str) -> None:
+    """Publish the completed book-level image path to the page manifest.
+
+    Standalone legacy queues may not have a page manifest, so they keep the
+    low-level queue behavior. Production-ready projects do have one; keeping
+    it synchronized here prevents the queue and delivery stages from having
+    different ideas about which image is current.
+    """
+    content_dir, _layout = _resolve_content_layout(book_dir)
+    candidates = [content_dir / "page-manifest.json", book_dir / "page-manifest.json"]
+    manifest_path = next((candidate for candidate in candidates if candidate.is_file()), None)
+    if manifest_path is None:
+        return
+
+    manifest = _read_json(manifest_path)
+    pages = manifest.get("pages")
+    if not isinstance(pages, list):
+        raise ValueError(f"page manifest pages are missing: {manifest_path}")
+    matches = [item for item in pages if isinstance(item, Mapping) and int(item.get("page", -1)) == int(page)]
+    if len(matches) != 1:
+        raise ValueError(f"page manifest must contain exactly one page {page}: {manifest_path}")
+    matches[0]["current_image_path"] = output_relative
+    _write_atomic(manifest_path, manifest)
+
+
 def _resolved_runtime_paths(book_dir: Path, job: Mapping[str, Any]) -> dict[str, str]:
     """Return host-ready reference paths without storing machine paths."""
     content_dir, _layout = _resolve_content_layout(book_dir)
@@ -1753,6 +1778,7 @@ def complete_job(
             job.get("declared_aspect_ratio"),
             expected_canvas_tuple,
         )
+        _sync_page_manifest_image(Path(state["book_dir"]), page, relative)
         finished_at = _now()
         job.update(
             {
