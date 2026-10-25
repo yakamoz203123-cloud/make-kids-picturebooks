@@ -21,6 +21,7 @@ for _module_name in (
 sys.path.insert(0, str(SCRIPTS_DIR))
 try:
     import workflow
+    from build_pure_image_delivery import build_delivery
     from test_phase3_preflight_archive import _fixture
 finally:
     sys.path.remove(str(SCRIPTS_DIR))
@@ -106,6 +107,31 @@ def test_finish_page_completes_claimed_page_and_publishes_manifest_path(tmp_path
     assert result["status"] == "completed"
     manifest = json.loads((book / "content" / "page-manifest.json").read_text(encoding="utf-8"))
     assert manifest["pages"][0]["current_image_path"] == "images/page-01.png"
+
+
+def test_finished_page_flows_directly_into_delivery_without_path_bridge(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    workflow.resume(root, "b01", version="v1", approval="批准一页", max_calls=1)
+    book = _book(root)
+    output = book / "images" / "page-01.png"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (1080, 1440), (220, 180, 120)).save(output, format="PNG")
+
+    workflow.finish_page(
+        root,
+        "b01",
+        1,
+        "images/page-01.png",
+        version="v1",
+        backend_task_id="backend-page-01",
+        elapsed_ms=100,
+    )
+
+    delivery = book / "delivery" / "pure-image-delivery-v1"
+    result = build_delivery(root, "b01", delivery, version="v1")
+
+    assert result["status"] == "built"
+    assert (delivery / "images" / "page-01.png").is_file()
 
 
 def test_resume_reports_complete_for_cached_project(tmp_path: Path) -> None:
