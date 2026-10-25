@@ -205,11 +205,11 @@
     },
     {
       "path": "make-kids-picturebooks/scripts/build_pure_image_delivery.py",
-      "sha256": "ad224f6018957afe7d17e607fe5d21b9568af04161f4ffdf53330e86e69b7153"
+      "sha256": "12d7349a05bd48af82db197b22eb6614f1a83bc04d94edc549fd4c75cdf0af3c"
     },
     {
       "path": "make-kids-picturebooks/scripts/clone_project_for_test.py",
-      "sha256": "d566ba79fa8f446197bd2dee4129d64ddef517acd2f6a851455b25da67b49d81"
+      "sha256": "070e07b90e763c1adf2357812a82e1c02c899008cbe5d63eac4a58fd7807f00b"
     },
     {
       "path": "make-kids-picturebooks/scripts/content_gate.py",
@@ -225,7 +225,7 @@
     },
     {
       "path": "make-kids-picturebooks/scripts/generation_queue.py",
-      "sha256": "52006bfa504926b3c3b792d7a26137731ba245b2be4a9713be9331e4cf73f91f"
+      "sha256": "1bb057dde1ffa11adf84be5b41b1a7b409752bf5c0072e8f6a37b14e804ef035"
     },
     {
       "path": "make-kids-picturebooks/scripts/layout_design.py",
@@ -289,7 +289,7 @@
     },
     {
       "path": "make-kids-picturebooks/scripts/workflow.py",
-      "sha256": "1a18df0646ca7ab494ff9a051d04cc26a1a11f1ad195e1cd0b357e169ee06087"
+      "sha256": "6e27d1a32c751320d8c9eef49818835951fab23ee1cdc8f6a6c18a4524f9f269"
     },
     {
       "path": "make-kids-picturebooks/SKILL.md",

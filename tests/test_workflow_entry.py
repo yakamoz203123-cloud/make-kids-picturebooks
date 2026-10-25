@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from PIL import Image
 
 
@@ -23,7 +24,7 @@ for _module_name in (
 sys.path.insert(0, str(SCRIPTS_DIR))
 try:
     import workflow
-    from build_pure_image_delivery import build_delivery
+    from build_pure_image_delivery import DeliveryError, build_delivery
     from test_phase3_preflight_archive import _fixture
 finally:
     sys.path.remove(str(SCRIPTS_DIR))
@@ -134,6 +135,47 @@ def test_finished_page_flows_directly_into_delivery_without_path_bridge(tmp_path
 
     assert result["status"] == "built"
     assert (delivery / "images" / "page-01.png").is_file()
+
+
+def test_finish_page_rejects_queue_belonging_to_another_book(tmp_path: Path) -> None:
+    first_root = _fixture(tmp_path / "first")
+    second_root = _fixture(tmp_path / "second")
+    workflow.resume(first_root, "b01", version="v1", approval="批准一页", max_calls=1)
+    second_claim = workflow.resume(second_root, "b01", version="v1", approval="批准一页", max_calls=1)
+    second_book = _book(second_root)
+    output = second_book / "images" / "page-01.png"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (1080, 1440), (220, 180, 120)).save(output, format="PNG")
+
+    with pytest.raises(ValueError, match="different book directory"):
+        workflow.finish_page(
+            first_root,
+            "b01",
+            1,
+            output,
+            version="v1",
+            queue_path=second_claim["queue_path"],
+        )
+
+    state = json.loads(Path(second_claim["queue_path"]).read_text(encoding="utf-8"))
+    assert state["jobs"][0]["status"] == "running"
+    assert state["request_lifecycle"][0]["submission_observed"] is False
+
+
+def test_delivery_rejects_manifest_path_before_queue_completion(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    workflow.resume(root, "b01", version="v1", approval="批准一页", max_calls=1)
+    book = _book(root)
+    output = book / "images" / "page-01.png"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (1080, 1440), (220, 180, 120)).save(output, format="PNG")
+    manifest_path = book / "content" / "page-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["pages"][0]["current_image_path"] = "images/page-01.png"
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+
+    with pytest.raises(DeliveryError, match="QUEUE_PAGE_NOT_COMPLETED:1"):
+        build_delivery(root, "b01", book / "delivery" / "pure-image-delivery-v1", version="v1")
 
 
 def test_resume_reports_complete_for_cached_project(tmp_path: Path) -> None:

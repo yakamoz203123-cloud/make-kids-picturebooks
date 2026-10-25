@@ -68,6 +68,34 @@ def test_clone_clears_manifest_paths_for_excluded_images(tmp_path):
     assert result["reset_image_references"] == 1
 
 
+def test_clone_clears_non_string_and_drive_relative_image_references(tmp_path):
+    source = tmp_path / "source"
+    destination = tmp_path / "copy"
+
+    _write(source / "project.json", b"{}")
+    _write(source / "books/b01/v1/content/reference.png", b"valid")
+    manifest = {
+        "pages": [
+            {"page": 1, "current_image_path": "   "},
+            {"page": 2, "current_image_path": {"path": "bad"}},
+            {"page": 3, "current_image_path": "C:page-03.png"},
+            {"page": 4, "current_image_path": "reference.png"},
+        ]
+    }
+    _write(
+        source / "books/b01/v1/content/page-manifest.json",
+        json.dumps(manifest).encode("utf-8"),
+    )
+
+    result = clone_project_for_test(source, destination)
+    copied = json.loads(
+        (destination / "books/b01/v1/content/page-manifest.json").read_text(encoding="utf-8")
+    )
+
+    assert [page["current_image_path"] for page in copied["pages"]] == [None, None, None, "reference.png"]
+    assert result["reset_image_references"] == 3
+
+
 def test_clone_refuses_existing_destination(tmp_path):
     source = tmp_path / "source"
     destination = tmp_path / "copy"

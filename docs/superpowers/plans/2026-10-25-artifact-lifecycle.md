@@ -111,3 +111,10 @@
 - Dependency check: `python -m pip check` reported `No broken requirements found.`
 - Repository hygiene: `git diff --check` passed.
 - Final compatibility fix: regenerated `MANIFEST.json`; added test-module isolation so the full suite cannot accidentally reuse an older installed skill module.
+
+## Post-review Hardening
+
+- [x] Make `finish_page` validate and persist submission/completion within one queue mutation lock.
+- [x] Reject terminal-request submission updates and custom queues belonging to another book.
+- [x] Make delivery fail closed when a current lifecycle queue and page manifest disagree; retain legacy queue compatibility.
+- [x] Normalize and clear blank, non-string, drive-relative, absolute, and escaping clone image references.

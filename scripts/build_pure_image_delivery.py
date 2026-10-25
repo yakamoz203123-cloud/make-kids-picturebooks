@@ -300,6 +300,49 @@ def _source_image(
     return candidates[0]
 
 
+def _validate_production_queue(book_dir: Path, pages: list[dict[str, Any]]) -> None:
+    """Refuse delivery when the production queue has not published every page.
+
+    The queue and page manifest are stored in separate atomic JSON files.  A
+    crash between those writes must therefore fail closed at delivery instead
+    of allowing a manifest-only image path to look complete.
+    """
+    queue_path = book_dir / "review" / "production-queue.json"
+    if not queue_path.is_file():
+        return
+    try:
+        queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise DeliveryError("PRODUCTION_QUEUE_INVALID") from exc
+    if not isinstance(queue, dict) or not isinstance(queue.get("jobs"), list):
+        raise DeliveryError("PRODUCTION_QUEUE_INVALID")
+    if "request_lifecycle" not in queue:
+        # Historical queues predate the page-finish lifecycle and may record
+        # the old content-root path. They remain readable by legacy delivery.
+        return
+    recorded_book = queue.get("book_dir")
+    if not isinstance(recorded_book, str) or Path(recorded_book).resolve() != book_dir.resolve():
+        raise DeliveryError("PRODUCTION_QUEUE_BOOK_MISMATCH")
+    jobs = {
+        int(job["page"]): job
+        for job in queue["jobs"]
+        if isinstance(job, dict) and str(job.get("page", "")).strip().isdigit()
+    }
+    for page in pages:
+        number = int(page["page"])
+        job = jobs.get(number)
+        if job is None:
+            raise DeliveryError(f"QUEUE_PAGE_MISSING:{number}")
+        if job.get("status") not in {"completed", "cached"}:
+            raise DeliveryError(f"QUEUE_PAGE_NOT_COMPLETED:{number}")
+        manifest_path = str(page.get("current_image_path") or "").replace("\\", "/").strip()
+        queue_path_value = str(job.get("output_path") or "").replace("\\", "/").strip()
+        if not manifest_path:
+            raise DeliveryError(f"QUEUE_MANIFEST_IMAGE_MISSING:{number}")
+        if not queue_path_value or manifest_path != queue_path_value:
+            raise DeliveryError(f"QUEUE_MANIFEST_IMAGE_MISMATCH:{number}")
+
+
 def _page_number_map(value: Any, name: str) -> dict[int, dict[str, Any]]:
     if not isinstance(value, dict) or not isinstance(value.get("pages"), list):
         raise DeliveryError(f"{name}_PAGES_MISSING")
@@ -536,6 +579,7 @@ def build_delivery(
     book_dir = _book_dir(root, book_id, version)
     contract = _load_delivery_contract(root, book_dir, book_id)
     storyboard, pages = contract.storyboard, contract.pages
+    _validate_production_queue(book_dir, pages)
     source_records: list[dict[str, Any]] = []
     for page in pages:
         source = _source_image(root, book_dir, page, content_dir=contract.content_dir)

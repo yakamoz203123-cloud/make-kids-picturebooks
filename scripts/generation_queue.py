@@ -1121,6 +1121,9 @@ def _update_request_record(state: dict[str, Any], request_id: str, event: str, *
         raise ValueError(f"terminal_state must be one of {sorted(REQUEST_STATES)!r}")
     if current_state in {"succeeded", "failed", "pending_unknown"} and next_state not in {None, current_state}:
         raise RuntimeError(f"request {request_id} is already terminal: {current_state}")
+    if current_state in {"succeeded", "failed", "pending_unknown"}:
+        if any(record.get(key) != value for key, value in updates.items()):
+            raise RuntimeError(f"request {request_id} is already terminal: {current_state}")
     changed = {key: value for key, value in updates.items() if record.get(key) != value}
     if not changed:
         return copy.deepcopy(record)
@@ -1746,6 +1749,75 @@ def claim_batch(
         return runtime_results
 
 
+def _complete_job_state(
+    state: dict[str, Any],
+    page: int,
+    output_path: str | Path,
+    *,
+    elapsed_ms: int | None = None,
+) -> dict[str, Any]:
+    """Complete one page in an already locked, in-memory queue state."""
+    job = _job(state, page)
+    if job["status"] != "running":
+        raise RuntimeError(f"page {page} must be running before completion")
+    request = _completion_request(state, job)
+    output = Path(output_path)
+    if not output.is_absolute():
+        output = Path(state["book_dir"]) / output
+    output = output.resolve()
+    relative = _relative_to_book(Path(state["book_dir"]), output)
+    if not output.is_file():
+        raise ValueError(f"completed image does not exist: {output}")
+    expected_canvas = job.get("expected_canvas")
+    expected_canvas_tuple = (
+        tuple(expected_canvas)
+        if isinstance(expected_canvas, list) and len(expected_canvas) == 2
+        else None
+    )
+    image_validation = _validate_image_file(
+        output,
+        job.get("declared_aspect_ratio"),
+        expected_canvas_tuple,
+    )
+    _sync_page_manifest_image(Path(state["book_dir"]), page, relative)
+    finished_at = _now()
+    job.update(
+        {
+            "status": "completed",
+            "output_path": relative,
+            "output_sha256": _file_hash(output),
+            "image_validation": image_validation,
+            "elapsed_ms": elapsed_ms,
+            "finished_at": finished_at,
+            "updated_at": _now(),
+            "last_error": None,
+        }
+    )
+    if request is not None:
+        stage_timings = _stage_timings(request, completed_at=finished_at)
+        _update_request_record(
+            state,
+            request["request_id"],
+            "request_completed",
+            terminal_state="succeeded",
+            wrapper_finished_at=finished_at,
+            wrapper_elapsed_ms=elapsed_ms if type(elapsed_ms) is int and elapsed_ms >= 0 else UNKNOWN,
+            artifact_path=relative,
+            artifact_sha256=job["output_sha256"],
+            stage_timings=stage_timings,
+        )
+    _append_event(
+        state,
+        "completed",
+        page,
+        elapsed_ms=elapsed_ms,
+        output_path=relative,
+        request_id=job.get("current_request_id"),
+        **_page_event_fields(job),
+    )
+    return copy.deepcopy(job)
+
+
 def complete_job(
     queue_path: str | Path,
     page: int,
@@ -1756,66 +1828,9 @@ def complete_job(
     queue_path = Path(queue_path).resolve()
     with _queue_mutation_lock(queue_path):
         state = _load_queue(queue_path)
-        job = _job(state, page)
-        if job["status"] != "running":
-            raise RuntimeError(f"page {page} must be running before completion")
-        request = _completion_request(state, job)
-        output = Path(output_path)
-        if not output.is_absolute():
-            output = Path(state["book_dir"]) / output
-        output = output.resolve()
-        relative = _relative_to_book(Path(state["book_dir"]), output)
-        if not output.is_file():
-            raise ValueError(f"completed image does not exist: {output}")
-        expected_canvas = job.get("expected_canvas")
-        expected_canvas_tuple = (
-            tuple(expected_canvas)
-            if isinstance(expected_canvas, list) and len(expected_canvas) == 2
-            else None
-        )
-        image_validation = _validate_image_file(
-            output,
-            job.get("declared_aspect_ratio"),
-            expected_canvas_tuple,
-        )
-        _sync_page_manifest_image(Path(state["book_dir"]), page, relative)
-        finished_at = _now()
-        job.update(
-            {
-                "status": "completed",
-                "output_path": relative,
-                "output_sha256": _file_hash(output),
-                "image_validation": image_validation,
-                "elapsed_ms": elapsed_ms,
-                "finished_at": finished_at,
-                "updated_at": _now(),
-                "last_error": None,
-            }
-        )
-        if request is not None:
-            stage_timings = _stage_timings(request, completed_at=finished_at)
-            _update_request_record(
-                state,
-                request["request_id"],
-                "request_completed",
-                terminal_state="succeeded",
-                wrapper_finished_at=finished_at,
-                wrapper_elapsed_ms=elapsed_ms if type(elapsed_ms) is int and elapsed_ms >= 0 else UNKNOWN,
-                artifact_path=relative,
-                artifact_sha256=job["output_sha256"],
-                stage_timings=stage_timings,
-            )
-        _append_event(
-            state,
-            "completed",
-            page,
-            elapsed_ms=elapsed_ms,
-            output_path=relative,
-            request_id=job.get("current_request_id"),
-            **_page_event_fields(job),
-        )
+        result = _complete_job_state(state, page, output_path, elapsed_ms=elapsed_ms)
         _save_queue(queue_path, state)
-        return copy.deepcopy(job)
+        return result
 
 
 def fail_job(
@@ -1865,6 +1880,40 @@ def fail_job(
         return copy.deepcopy(job)
 
 
+def _mark_request_submitted_state(
+    state: dict[str, Any],
+    request_id: str,
+    *,
+    backend_task_id: str | None = None,
+) -> dict[str, Any]:
+    """Record submission in a running request within an existing mutation."""
+    record = _request_record(state, request_id)
+    if record.get("terminal_state") != "running":
+        raise RuntimeError(f"request {request_id} is already terminal: {record.get('terminal_state')}")
+    job = _job(state, int(record["page"]))
+    if job.get("status") != "running" or job.get("current_request_id") != request_id:
+        raise RuntimeError(f"page {job['page']} must be running before submission is recorded")
+    backend = str(backend_task_id).strip() if backend_task_id is not None else UNKNOWN
+    if not backend:
+        backend = UNKNOWN
+    if record.get("submission_observed") is True:
+        current_backend = record.get("backend_task_id", UNKNOWN)
+        if current_backend not in {UNKNOWN, backend} and backend != UNKNOWN:
+            raise ValueError("backend_task_id conflicts with the existing submission record")
+        if current_backend == backend or backend == UNKNOWN:
+            return copy.deepcopy(record)
+    submitted_at = _now()
+    return _update_request_record(
+        state,
+        request_id,
+        "request_submitted",
+        submission_observed=True,
+        backend_task_id=backend,
+        submitted_at=submitted_at,
+        stage_timings=_stage_timings(record, submitted_at=submitted_at),
+    )
+
+
 def mark_request_submitted(
     queue_path: str | Path,
     request_id: str,
@@ -1875,26 +1924,7 @@ def mark_request_submitted(
     queue_path = Path(queue_path).resolve()
     with _queue_mutation_lock(queue_path):
         state = _load_queue(queue_path)
-        record = _request_record(state, request_id)
-        backend = str(backend_task_id).strip() if backend_task_id is not None else UNKNOWN
-        if not backend:
-            backend = UNKNOWN
-        if record.get("submission_observed") is True:
-            current_backend = record.get("backend_task_id", UNKNOWN)
-            if current_backend not in {UNKNOWN, backend} and backend != UNKNOWN:
-                raise ValueError("backend_task_id conflicts with the existing submission record")
-            if current_backend == backend or backend == UNKNOWN:
-                return copy.deepcopy(record)
-        submitted_at = _now()
-        result = _update_request_record(
-            state,
-            request_id,
-            "request_submitted",
-            submission_observed=True,
-            backend_task_id=backend,
-            submitted_at=submitted_at,
-            stage_timings=_stage_timings(record, submitted_at=submitted_at),
-        )
+        result = _mark_request_submitted_state(state, request_id, backend_task_id=backend_task_id)
         _save_queue(queue_path, state)
         return result
 
@@ -1907,14 +1937,21 @@ def finish_page(
     backend_task_id: str | None = None,
     elapsed_ms: int | None = None,
 ) -> dict[str, Any]:
-    """Record submission and complete one page through a single safe entry point."""
+    """Record submission and complete one page in one queue mutation."""
     queue_path = Path(queue_path).resolve()
-    state = _load_queue(queue_path)
-    job = _job(state, page)
-    request_id = job.get("current_request_id")
-    if isinstance(request_id, str) and request_id.strip():
-        mark_request_submitted(queue_path, request_id, backend_task_id=backend_task_id)
-    return complete_job(queue_path, page, output_path, elapsed_ms=elapsed_ms)
+    with _queue_mutation_lock(queue_path):
+        state = _load_queue(queue_path)
+        job = _job(state, page)
+        if job["status"] != "running":
+            raise RuntimeError(f"page {page} must be running before completion")
+        if job.get(LIFECYCLE_ENFORCED_FIELD) is True:
+            request_id = job.get("current_request_id")
+            if not isinstance(request_id, str) or not request_id.strip():
+                raise ValueError("REQUEST_LIFECYCLE_RECORD_MISSING")
+            _mark_request_submitted_state(state, request_id, backend_task_id=backend_task_id)
+        result = _complete_job_state(state, page, output_path, elapsed_ms=elapsed_ms)
+        _save_queue(queue_path, state)
+        return result
 
 
 def mark_request_timeout(

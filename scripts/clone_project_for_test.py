@@ -40,7 +40,13 @@ def _image_reference_exists(manifest_path: Path, value: str) -> bool:
     normalized = raw.replace("\\", "/")
     posix = PurePosixPath(normalized)
     windows = PureWindowsPath(raw)
-    if not normalized or posix.is_absolute() or windows.is_absolute() or ".." in posix.parts:
+    if (
+        not normalized
+        or posix.is_absolute()
+        or windows.is_absolute()
+        or bool(windows.drive)
+        or ".." in posix.parts
+    ):
         return False
     book_dir = manifest_path.parent.parent if manifest_path.parent.name.casefold() == "content" else manifest_path.parent
     return any((root / Path(normalized)).is_file() for root in (book_dir, book_dir / "content"))
@@ -61,7 +67,9 @@ def _sanitize_missing_image_references(staging: Path) -> int:
             if not isinstance(page, dict):
                 continue
             value = page.get("current_image_path")
-            if isinstance(value, str) and value.strip() and not _image_reference_exists(manifest_path, value):
+            if value is None:
+                continue
+            if not isinstance(value, str) or not value.strip() or not _image_reference_exists(manifest_path, value):
                 page["current_image_path"] = None
                 reset_count += 1
                 changed = True

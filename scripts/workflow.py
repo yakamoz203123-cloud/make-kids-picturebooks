@@ -56,6 +56,15 @@ def _book_and_queue(
     return book_dir, resolved_queue
 
 
+def _load_queue_for_book(book_dir: Path, queue_path: Path) -> dict[str, Any]:
+    """Load a queue only when its recorded book directory matches the target."""
+    state = _load_queue(queue_path)
+    recorded_book = state.get("book_dir")
+    if not isinstance(recorded_book, str) or Path(recorded_book).resolve() != book_dir.resolve():
+        raise ValueError("existing queue belongs to a different book directory")
+    return state
+
+
 def _doctor_next_action(report: Mapping[str, Any]) -> str:
     if report.get("status") == "passed":
         return "可以运行 workflow.py resume；正式生图前仍需明确用户授权。"
@@ -160,9 +169,7 @@ def resume(
     # is marked running, report waiting and let the existing lifecycle commands
     # resolve it explicitly.
     if resolved_queue.is_file():
-        existing = _load_queue(resolved_queue)
-        if Path(existing["book_dir"]).resolve() != book_dir:
-            raise ValueError("existing queue belongs to a different book directory")
+        existing = _load_queue_for_book(book_dir, resolved_queue)
         existing_running = sorted(
             int(job["page"])
             for job in existing.get("jobs", [])
@@ -283,7 +290,8 @@ def finish_page(
     elapsed_ms: int | None = None,
 ) -> dict[str, Any]:
     """Record submission and complete one claimed page through one user-facing command."""
-    _book_dir_path, resolved_queue = _book_and_queue(project, book_id, version, queue_path)
+    book_dir, resolved_queue = _book_and_queue(project, book_id, version, queue_path)
+    _load_queue_for_book(book_dir, resolved_queue)
     job = finish_queue_page(
         resolved_queue,
         page,

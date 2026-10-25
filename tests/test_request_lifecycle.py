@@ -109,6 +109,43 @@ def test_finish_page_records_submission_and_completion_in_one_call(tmp_path: Pat
     assert manifest["pages"][0]["current_image_path"] == "images/page-01.png"
 
 
+def test_finish_page_does_not_add_submission_evidence_after_page_failed(tmp_path: Path) -> None:
+    module = load_module()
+    book, queue = make_book(tmp_path)
+    module.init_queue(book, queue)
+    claimed = module.claim_job(queue, 1)
+    module.fail_job(queue, 1, "backend rejected image", failure_code="BACKEND_REJECTED")
+    output = book / "images" / "page-01.png"
+    write_image(output)
+
+    with pytest.raises(RuntimeError, match="must be running"):
+        module.finish_page(queue, 1, output, backend_task_id="late-backend-id")
+    with pytest.raises(RuntimeError, match="already terminal"):
+        module.mark_request_submitted(queue, claimed["current_request_id"], backend_task_id="late-backend-id")
+
+    state = json.loads(queue.read_text(encoding="utf-8"))
+    record = request_record(queue, claimed["current_request_id"])
+    assert state["jobs"][0]["status"] == "retryable"
+    assert record["submission_observed"] is False
+    assert record["terminal_state"] == "failed"
+
+
+def test_finish_page_does_not_persist_submission_when_completion_fails(tmp_path: Path) -> None:
+    module = load_module()
+    book, queue = make_book(tmp_path)
+    module.init_queue(book, queue)
+    claimed = module.claim_job(queue, 1)
+
+    with pytest.raises(ValueError, match="completed image does not exist"):
+        module.finish_page(queue, 1, book / "images" / "missing.png")
+
+    state = json.loads(queue.read_text(encoding="utf-8"))
+    record = request_record(queue, claimed["current_request_id"])
+    assert state["jobs"][0]["status"] == "running"
+    assert record["submission_observed"] is False
+    assert record["terminal_state"] == "running"
+
+
 def test_new_request_requires_observed_submission_before_completion(tmp_path: Path) -> None:
     module = load_module()
     book, queue = make_book(tmp_path)
