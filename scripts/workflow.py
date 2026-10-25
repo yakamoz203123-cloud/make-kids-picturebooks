@@ -22,6 +22,7 @@ from generation_queue import (
     _queue_phase_status,
     authorize_generation,
     claim_job,
+    finish_page as finish_queue_page,
     init_queue,
 )
 from project_preflight import MODES, preflight_project
@@ -31,6 +32,7 @@ from release_pure_image_delivery import release_delivery
 SAFE_EXIT_STATUSES = {
     "passed",
     "claimed",
+    "completed",
     "waiting",
     "complete",
     "released",
@@ -269,6 +271,34 @@ def deliver(
     return release_delivery(project, book_id, delivery, version=version)
 
 
+def finish_page(
+    project: str | Path,
+    book_id: str,
+    page: int,
+    output: str | Path,
+    *,
+    version: str | None = None,
+    queue_path: str | Path | None = None,
+    backend_task_id: str | None = None,
+    elapsed_ms: int | None = None,
+) -> dict[str, Any]:
+    """Record submission and complete one claimed page through one user-facing command."""
+    _book_dir_path, resolved_queue = _book_and_queue(project, book_id, version, queue_path)
+    job = finish_queue_page(
+        resolved_queue,
+        page,
+        output,
+        backend_task_id=backend_task_id,
+        elapsed_ms=elapsed_ms,
+    )
+    return {
+        "status": "completed",
+        "queue_path": str(resolved_queue),
+        "page": page,
+        "job": job,
+    }
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -293,6 +323,16 @@ def _parser() -> argparse.ArgumentParser:
     release.add_argument("book_id")
     release.add_argument("delivery", type=Path)
     release.add_argument("--version")
+
+    finish = subparsers.add_parser("finish-page", help="record submission and complete one claimed page")
+    finish.add_argument("project", type=Path)
+    finish.add_argument("book_id")
+    finish.add_argument("--page", type=int, required=True)
+    finish.add_argument("--output", type=Path, required=True)
+    finish.add_argument("--version")
+    finish.add_argument("--queue-json", type=Path)
+    finish.add_argument("--backend-task-id")
+    finish.add_argument("--elapsed-ms", type=int)
     return parser
 
 
@@ -313,6 +353,17 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.command == "deliver":
             result = deliver(args.project, args.book_id, args.delivery, version=args.version)
+        elif args.command == "finish-page":
+            result = finish_page(
+                args.project,
+                args.book_id,
+                args.page,
+                args.output,
+                version=args.version,
+                queue_path=args.queue_json,
+                backend_task_id=args.backend_task_id,
+                elapsed_ms=args.elapsed_ms,
+            )
         else:  # pragma: no cover
             raise ValueError(f"unsupported command: {args.command}")
     except (OSError, RuntimeError, ValueError) as exc:

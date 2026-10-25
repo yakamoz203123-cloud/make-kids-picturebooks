@@ -85,6 +85,30 @@ def test_success_request_records_artifact_and_unknown_server_fields(tmp_path: Pa
     assert record["cost"] == "cost_unknown"
 
 
+def test_finish_page_records_submission_and_completion_in_one_call(tmp_path: Path) -> None:
+    module = load_module()
+    book, queue = make_book(tmp_path)
+    module.init_queue(book, queue)
+    module.claim_job(queue, 1)
+    output = book / "images" / "page-01.png"
+    write_image(output)
+
+    completed = module.finish_page(
+        queue,
+        1,
+        output,
+        backend_task_id="backend-page-01",
+        elapsed_ms=1250,
+    )
+
+    assert completed["status"] == "completed"
+    record = request_record(queue, completed["current_request_id"])
+    assert record["submission_observed"] is True
+    assert record["backend_task_id"] == "backend-page-01"
+    manifest = json.loads((book / "page-manifest.json").read_text(encoding="utf-8"))
+    assert manifest["pages"][0]["current_image_path"] == "images/page-01.png"
+
+
 def test_new_request_requires_observed_submission_before_completion(tmp_path: Path) -> None:
     module = load_module()
     book, queue = make_book(tmp_path)

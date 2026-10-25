@@ -1899,6 +1899,24 @@ def mark_request_submitted(
         return result
 
 
+def finish_page(
+    queue_path: str | Path,
+    page: int,
+    output_path: str | Path,
+    *,
+    backend_task_id: str | None = None,
+    elapsed_ms: int | None = None,
+) -> dict[str, Any]:
+    """Record submission and complete one page through a single safe entry point."""
+    queue_path = Path(queue_path).resolve()
+    state = _load_queue(queue_path)
+    job = _job(state, page)
+    request_id = job.get("current_request_id")
+    if isinstance(request_id, str) and request_id.strip():
+        mark_request_submitted(queue_path, request_id, backend_task_id=backend_task_id)
+    return complete_job(queue_path, page, output_path, elapsed_ms=elapsed_ms)
+
+
 def mark_request_timeout(
     queue_path: str | Path,
     request_id: str,
@@ -2278,6 +2296,12 @@ def _parser() -> argparse.ArgumentParser:
     complete.add_argument("--page", type=int, required=True)
     complete.add_argument("--output", type=Path, required=True)
     complete.add_argument("--elapsed-ms", type=int)
+    finish = subparsers.add_parser("finish-page", help="record submission and complete one page")
+    finish.add_argument("queue_json", type=Path)
+    finish.add_argument("--page", type=int, required=True)
+    finish.add_argument("--output", type=Path, required=True)
+    finish.add_argument("--backend-task-id")
+    finish.add_argument("--elapsed-ms", type=int)
     fail = subparsers.add_parser("fail")
     fail.add_argument("queue_json", type=Path)
     fail.add_argument("--page", type=int, required=True)
@@ -2335,6 +2359,14 @@ def main(argv: list[str] | None = None) -> int:
             result = authorize_generation(args.queue_json, approval=args.approval, max_calls=args.max_calls)
         elif args.command == "complete":
             result = complete_job(args.queue_json, args.page, args.output, elapsed_ms=args.elapsed_ms)
+        elif args.command == "finish-page":
+            result = finish_page(
+                args.queue_json,
+                args.page,
+                args.output,
+                backend_task_id=args.backend_task_id,
+                elapsed_ms=args.elapsed_ms,
+            )
         elif args.command == "fail":
             result = fail_job(args.queue_json, args.page, args.error, failure_code=args.failure_code)
         elif args.command == "resume":

@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+from PIL import Image
+
 
 SKILL_DIR = Path(__file__).parents[1]
 SCRIPTS_DIR = SKILL_DIR / "scripts"
@@ -80,6 +82,30 @@ def test_resume_reports_waiting_when_a_page_is_already_running(tmp_path: Path) -
     assert first["status"] == "claimed"
     assert result["status"] == "waiting"
     assert result["running_pages"] == [1]
+
+
+def test_finish_page_completes_claimed_page_and_publishes_manifest_path(tmp_path: Path) -> None:
+    root = _fixture(tmp_path)
+    claimed = workflow.resume(root, "b01", version="v1", approval="批准一页", max_calls=1)
+    book = _book(root)
+    output = book / "images" / "page-01.png"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (1080, 1440), (220, 180, 120)).save(output, format="PNG")
+
+    result = workflow.finish_page(
+        root,
+        "b01",
+        1,
+        "images/page-01.png",
+        version="v1",
+        backend_task_id="backend-page-01",
+        elapsed_ms=100,
+    )
+
+    assert claimed["status"] == "claimed"
+    assert result["status"] == "completed"
+    manifest = json.loads((book / "content" / "page-manifest.json").read_text(encoding="utf-8"))
+    assert manifest["pages"][0]["current_image_path"] == "images/page-01.png"
 
 
 def test_resume_reports_complete_for_cached_project(tmp_path: Path) -> None:
