@@ -13,6 +13,8 @@ SKILL_DIR = Path(__file__).parents[1]
 SCRIPTS_DIR = SKILL_DIR / "scripts"
 for _module_name in (
     "workflow",
+    "build_pure_image_delivery",
+    "project_paths",
     "generation_queue",
     "project_preflight",
     "release_pure_image_delivery",
