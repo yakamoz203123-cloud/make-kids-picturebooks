@@ -9,6 +9,7 @@ import re
 import shutil
 import tempfile
 from pathlib import Path
+from pathlib import PurePosixPath, PureWindowsPath
 from typing import Any
 
 
@@ -32,6 +33,44 @@ def _is_excluded(relative: Path) -> bool:
             if index > 0 and _VERSION_DIR_RE.fullmatch(parts[index - 1]):
                 return True
     return False
+
+
+def _image_reference_exists(manifest_path: Path, value: str) -> bool:
+    raw = value.strip()
+    normalized = raw.replace("\\", "/")
+    posix = PurePosixPath(normalized)
+    windows = PureWindowsPath(raw)
+    if not normalized or posix.is_absolute() or windows.is_absolute() or ".." in posix.parts:
+        return False
+    book_dir = manifest_path.parent.parent if manifest_path.parent.name.casefold() == "content" else manifest_path.parent
+    return any((root / Path(normalized)).is_file() for root in (book_dir, book_dir / "content"))
+
+
+def _sanitize_missing_image_references(staging: Path) -> int:
+    reset_count = 0
+    for manifest_path in staging.rglob("page-manifest.json"):
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        pages = manifest.get("pages") if isinstance(manifest, dict) else None
+        if not isinstance(pages, list):
+            continue
+        changed = False
+        for page in pages:
+            if not isinstance(page, dict):
+                continue
+            value = page.get("current_image_path")
+            if isinstance(value, str) and value.strip() and not _image_reference_exists(manifest_path, value):
+                page["current_image_path"] = None
+                reset_count += 1
+                changed = True
+        if changed:
+            manifest_path.write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+    return reset_count
 
 
 def clone_project_for_test(source: str | Path, destination: str | Path) -> dict[str, Any]:
@@ -73,6 +112,7 @@ def clone_project_for_test(source: str | Path, destination: str | Path) -> dict[
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source_file, target)
                 copied_files += 1
+        reset_image_references = _sanitize_missing_image_references(staging)
         staging.replace(destination_root)
     except Exception:
         shutil.rmtree(staging, ignore_errors=True)
@@ -84,6 +124,7 @@ def clone_project_for_test(source: str | Path, destination: str | Path) -> dict[
         "destination": str(destination_root),
         "copied_files": copied_files,
         "excluded_files": excluded_files,
+        "reset_image_references": reset_image_references,
     }
 
 

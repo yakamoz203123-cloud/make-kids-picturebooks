@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import sys
 
@@ -44,6 +45,27 @@ def test_clone_excludes_runtime_outputs_but_preserves_reusable_inputs(tmp_path):
     assert not (destination / "books/b01/v1/review/production-queue.json").exists()
     assert not (destination / "books/b01/v1/review/recovery-candidates").exists()
     assert not (destination / "PICTUREBOOK_TEST_REPORT.md").exists()
+
+
+def test_clone_clears_manifest_paths_for_excluded_images(tmp_path):
+    source = tmp_path / "source"
+    destination = tmp_path / "copy"
+
+    _write(source / "project.json", b"{}")
+    manifest = {"pages": [{"page": 1, "current_image_path": "images/page-01.png"}]}
+    _write(
+        source / "books/b01/v1/content/page-manifest.json",
+        json.dumps(manifest).encode("utf-8"),
+    )
+    _write(source / "books/b01/v1/content/images/page-01.png", b"excluded")
+
+    result = clone_project_for_test(source, destination)
+
+    copied = json.loads(
+        (destination / "books/b01/v1/content/page-manifest.json").read_text(encoding="utf-8")
+    )
+    assert copied["pages"][0]["current_image_path"] is None
+    assert result["reset_image_references"] == 1
 
 
 def test_clone_refuses_existing_destination(tmp_path):
