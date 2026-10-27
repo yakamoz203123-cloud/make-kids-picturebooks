@@ -4,6 +4,7 @@ import os
 import sys
 import time
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -12,11 +13,14 @@ from PIL import Image
 
 
 SCRIPT_PATH = Path(__file__).parents[1] / "scripts" / "generation_queue.py"
+SCRIPT_DIR = SCRIPT_PATH.parent
 
 
 def load_module():
     if not SCRIPT_PATH.exists():
         raise AssertionError(f"missing production queue script: {SCRIPT_PATH}")
+    if str(SCRIPT_DIR) not in sys.path:
+        sys.path.insert(0, str(SCRIPT_DIR))
     spec = importlib.util.spec_from_file_location("generation_queue_under_test", SCRIPT_PATH)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -255,6 +259,47 @@ class GenerationQueueTests(unittest.TestCase):
             self.module.claim_batch(self.queue, [3])
         state = json.loads(self.queue.read_text(encoding="utf-8"))
         self.assertEqual([job["status"] for job in state["jobs"]], ["running", "running", "pending"])
+
+    def test_request_deadline_probe_stays_read_only_before_deadline(self):
+        self._init()
+        claimed = self.module.claim_job(self.queue, 1)
+        started = datetime.fromisoformat(claimed["started_at"])
+        now = started + timedelta(seconds=179)
+
+        result = self.module.request_deadline_status(
+            self.queue,
+            claimed["current_request_id"],
+            timeout_seconds=180,
+            now=now,
+        )
+
+        self.assertEqual(result["status"], "running")
+        self.assertFalse(result["timeout_required"])
+        self.assertEqual(result["elapsed_ms"], 179000)
+        state = json.loads(self.queue.read_text(encoding="utf-8"))
+        self.assertEqual(state["jobs"][0]["status"], "running")
+
+    def test_request_deadline_probe_requires_explicit_timeout_after_deadline(self):
+        self._init()
+        claimed = self.module.claim_job(self.queue, 1)
+        started = datetime.fromisoformat(claimed["started_at"])
+        now = started + timedelta(seconds=181)
+
+        result = self.module.request_deadline_status(
+            self.queue,
+            claimed["current_request_id"],
+            timeout_seconds=180,
+            now=now,
+        )
+
+        self.assertEqual(result["status"], "timeout_required")
+        self.assertTrue(result["timeout_required"])
+        self.assertEqual(result["elapsed_ms"], 181000)
+        self.assertIn("pending-unknown", result["next_action"])
+        state = json.loads(self.queue.read_text(encoding="utf-8"))
+        self.assertEqual(state["jobs"][0]["status"], "running")
+        request = state["request_lifecycle"][0]
+        self.assertEqual(request["terminal_state"], "running")
 
     def test_reinitialization_does_not_trust_changed_completed_output(self):
         self._init()

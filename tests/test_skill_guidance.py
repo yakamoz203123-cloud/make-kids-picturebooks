@@ -683,7 +683,7 @@ class SkillGuidanceTests(unittest.TestCase):
 
         for term in (
             "第一阶段最短路径",
-            "输入契约 → 知识门禁 → 故事/整本分镜 → 资产锁定",
+            "输入契约 → 章节锁定快照 → 知识门禁 → 故事/整本分镜 → 资产锁定",
             "一次整本 strict 预检",
             "一页一次轻量检查",
             "默认不进入 PDF、打印、社媒渲染、历史迁移",
@@ -723,6 +723,30 @@ class SkillGuidanceTests(unittest.TestCase):
             "generation queue",
             "delivery manifest",
             "review/acceptance",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, combined)
+
+    def test_workflow_optimization_keeps_one_preflight_and_explicit_authorization(self) -> None:
+        combined = "\n".join(
+            read(path)
+            for path in (
+                "SKILL.md",
+                "references/production-workflow.md",
+            )
+        )
+        for term in (
+            "章节锁定快照",
+            "一次整本 strict 预检",
+            "--report-json",
+            "gate_summary",
+            "input_snapshot.plan_fingerprint",
+            "READY_FOR_USER_AUTHORIZATION",
+            "image_generation=SKIPPED",
+            "正式不可变资产只能引用",
+            "生产参考图不能混入正式资产包",
+            "门禁只检测不互相修复",
+            "不代表人工视觉审核通过",
         ):
             with self.subTest(term=term):
                 self.assertIn(term, combined)

@@ -10,14 +10,16 @@ description: Use when the user provides an adult knowledge book or chapter, or o
 ## 默认主链
 
 ```text
-输入契约 → 知识门禁 → 故事/整本分镜 → 资产锁定
-→ 一次整本 strict 预检 → 串行逐页生图
+输入契约 → 章节锁定快照 → 知识门禁 → 故事设计 → 故事/整本分镜 → 资产锁定
+→ 一次整本 strict 预检 → 用户授权 → 串行逐页生图
 → 页面审核 → 局部返工 → pure-images 确定性交付
 ```
 
 默认不进入 PDF、打印、社媒渲染、历史迁移、发布打包或完整性能统计。每个阶段只新增一种结果；关键输入未变时复用证据，不重复整本工作。
 
 `SKILL.md` 只负责入口和路由；[references/production-workflow.md](references/production-workflow.md) 是默认流程唯一详细来源。输入选择统一读取 [references/input-selection.md](references/input-selection.md)，研究门禁读取 [references/research-input-gate.md](references/research-input-gate.md)，其他 reference 按当前分支加载。
+
+默认效率规则：先锁定本章输入和资产版本，再只运行一次整本 `pre_generation/strict`。对外使用 `workflow.py doctor` 这一条入口；终端只输出紧凑门禁摘要，完整 evidence 只有在明确指定 `--report-json` 时保存。独立检查可以共享同一只读快照并并行调度，但不新增第二套验证系统；预检不会修复文件、创建队列或调用图片模型。
 
 ## 唯一职责
 
@@ -34,7 +36,7 @@ workflow.py resume  /absolute/project b01 --version v1 --approval "用户批准�
 workflow.py deliver /absolute/project b01 /absolute/project/books/b01/v1/delivery/pure-image-delivery-v1 --version v1
 ```
 
-`doctor` 只读检查；`resume` 初始化或复用队列并最多领取一页，没有授权返回 `authorization_required`，不会自动批准；`deliver` 委托现有 `pre_delivery/strict` 和人工审核边界。运行中的页面、未知请求、失败页和发布阻断都停止等待下一步，不自动恢复或重试。
+`doctor` 只读检查；`resume` 初始化或复用队列并最多领取一页，正式模式默认开启视觉审核门禁；没有授权返回 `authorization_required`，不会自动批准；`deliver` 委托现有 `pre_delivery/strict` 和人工审核边界。运行中的页面、未知请求、失败页和发布阻断都停止等待下一步，不自动恢复或重试。图片调用的本地保护时限为 180 秒；达到时限只触发只读 `generation_queue.py deadline` 探针，不代表后端失败。
 
 ## 不可删除的硬约束
 
@@ -47,7 +49,7 @@ workflow.py deliver /absolute/project b01 /absolute/project/books/b01/v1/deliver
 
 ## 输入、故事与资产
 
-使用 `references/input-selection.md` 选择年龄和主题；使用 Research 包时先运行 `content_gate.py validate-packet` 生成 `knowledge-whitelist.json`，故事完成后运行 `content_gate.py validate-story` 并保留 `story-claim trace`。教育目标卡必须在正式分镜前填写 `core_knowledge`、`target_age_band`、`prior_experience`、`visible_relationship`、`knowledge_boundary` 和 `reading_observation`。
+使用 `references/input-selection.md` 选择年龄和主题；使用 Research 包时先运行 `content_gate.py validate-packet` 生成 `knowledge-whitelist.json`，故事完成后运行 `content_gate.py validate-story` 并保留 `story-claim trace`。教育目标卡必须在正式分镜前填写 `core_knowledge`、`target_age_band`、`prior_experience`、`visible_relationship`、`knowledge_boundary` 和 `reading_observation`。新故事先读取 [references/story-design.md](references/story-design.md)，完成最小故事卡和故事门禁，再进入正文与整本分镜。
 
 先故事、再页面、再镜头；采用视觉事件驱动分页，页数自主决定。正文中的多个重要动作或知识事件应删减、拆分或重新安排，形成“儿童行动—期待—发现”，不能只排成观察说明清单。角色身份锁定、系列角色优先、规范角色名、别名/同音字解析和 approved/reused 版本见 [references/characters.md](references/characters.md)。
 
@@ -55,9 +57,13 @@ workflow.py deliver /absolute/project b01 /absolute/project/books/b01/v1/deliver
 
 快速出图协议：先完成 `layout_design` 和目标 profile 预检，再调用图像生成器；使用稳定基础提示词、同版本 `production_reference_path`，每页一次生成，先检查已有结果，不重复提交。历史“两页一批”只是兼容记录，不代表并行许可。
 
+生图调用必须有明确的本地保护边界：请求开始后 180 秒内可继续等待；超过 180 秒先运行 `generation_queue.py deadline QUEUE_JSON --request-id REQUEST_ID`，检查目标产物；无产物时严格按 `timeout-request → pending-unknown → 停止` 处理，不自动重试或领取下一页。
+
 ## 门禁、页面和证据
 
-正式生图前运行 `project_preflight.py ... --phase pre_generation --mode strict`；正式 `generation_queue.py init` 会复验并保存回执。页面继续保留 manifest continuity fields：`previous_page_state`、`current_page_entry`、`next_page_hook`、`state_id`、`summary`、`continuity_invariants` 和 `visual_direction`。`page-manifest` 是页面约束和科学证据的事实源。
+正式生图前运行 `workflow.py doctor ... --mode strict`；需要完整证据时加 `--report-json`。其内部复用 `project_preflight.py ... --phase pre_generation --mode strict`，正式 `generation_queue.py init` 会复验并保存回执。页面继续保留 manifest continuity fields：`previous_page_state`、`current_page_entry`、`next_page_hook`、`state_id`、`summary`、`continuity_invariants` 和 `visual_direction`。`page-manifest` 是页面约束和科学证据的事实源。
+
+`doctor` 的 `READY_FOR_USER_AUTHORIZATION` 只表示工程和内容门禁满足进入生图阶段的条件，不代表已获得用户授权，也不代表人工视觉审核通过；`HOLD`、`STALE`、`NEEDS_REVIEW` 或任一 blocker 都必须停止。预检结果中的 `image_generation` 应保持 `SKIPPED`，直到用户明确授权并进入队列。
 
 审核必须观察 `layout_review`、`text-image state matching` 和 `adjacent-page pair`；页面字段和审核记录分别见 [references/page-records.md](references/page-records.md) 与 [references/review.md](references/review.md)。技术生成成功、尺寸通过和脚本通过都不等于人工视觉批准。交付顺序默认是 `build_pure_image_delivery.py` 后由人工批准，再由 `release_pure_image_delivery.py` 释放；四类证据分别是 `engineering evidence`、`content evidence`、`visual evidence` 和 `real-reading evidence`。
 

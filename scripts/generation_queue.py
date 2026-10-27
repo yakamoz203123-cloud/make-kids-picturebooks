@@ -32,6 +32,7 @@ SCHEMA_VERSION = 1
 REQUEST_LIFECYCLE_SCHEMA_VERSION = 1
 DEFAULT_MAX_IN_FLIGHT = 2
 DEFAULT_MAX_ATTEMPTS = 2
+DEFAULT_REQUEST_TIMEOUT_SECONDS = 180
 MIN_IMAGE_SIDE_PX = 1024
 COORDINATION_MODE = "single-coordinator"
 WORKFLOW_RULES_VERSION = "workflow-gates-v1"
@@ -2320,6 +2321,62 @@ def status(queue_path: str | Path) -> dict[str, Any]:
     }
 
 
+def request_deadline_status(
+    queue_path: str | Path,
+    request_id: str,
+    *,
+    timeout_seconds: int = DEFAULT_REQUEST_TIMEOUT_SECONDS,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Report whether a running request crossed the local protection deadline.
+
+    This probe is deliberately read-only.  Crossing the deadline does not prove
+    that a remote image backend failed; the caller must inspect the artifact and
+    then use the explicit timeout/pending-unknown lifecycle commands.
+    """
+    if type(timeout_seconds) is not int or timeout_seconds <= 0:
+        raise ValueError("timeout_seconds must be a positive integer")
+    state = _load_queue(Path(queue_path).resolve())
+    record = _request_record(state, request_id)
+    page = int(record["page"])
+    job = _job(state, page)
+    started_at = record.get("local_started_at") or job.get("started_at")
+    if not isinstance(started_at, str) or not started_at.strip():
+        raise ValueError(f"request {request_id} has no local start time")
+    started = datetime.fromisoformat(started_at)
+    if started.tzinfo is None:
+        started = started.replace(tzinfo=timezone.utc)
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    elapsed_ms = max(0, round((current.astimezone(timezone.utc) - started.astimezone(timezone.utc)).total_seconds() * 1000))
+    running = record.get("terminal_state") == "running" and job.get("status") == "running"
+    timeout_required = running and elapsed_ms >= timeout_seconds * 1000
+    if not running:
+        return {
+            "status": str(record.get("terminal_state") or job.get("status") or "unknown"),
+            "timeout_required": False,
+            "request_id": request_id,
+            "page": page,
+            "elapsed_ms": elapsed_ms,
+            "deadline_ms": timeout_seconds * 1000,
+            "next_action": "按当前终态继续生命周期处理，不重复提交。",
+        }
+    return {
+        "status": "timeout_required" if timeout_required else "running",
+        "timeout_required": timeout_required,
+        "request_id": request_id,
+        "page": page,
+        "elapsed_ms": elapsed_ms,
+        "deadline_ms": timeout_seconds * 1000,
+        "next_action": (
+            "检查产物；无产物时按 timeout-request → pending-unknown → 停止处理，不自动重试。"
+            if timeout_required
+            else "继续等待；达到 deadline 后先检查产物，不把超时当作后端失败。"
+        ),
+    }
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -2395,6 +2452,13 @@ def _parser() -> argparse.ArgumentParser:
     pending_unknown.add_argument("queue_json", type=Path)
     pending_unknown.add_argument("--request-id", required=True)
     pending_unknown.add_argument("--reason", default="no terminal response or local artifact")
+    deadline = subparsers.add_parser(
+        "deadline",
+        help="read-only local deadline probe for one running request",
+    )
+    deadline.add_argument("queue_json", type=Path)
+    deadline.add_argument("--request-id", required=True)
+    deadline.add_argument("--timeout-seconds", type=int, default=DEFAULT_REQUEST_TIMEOUT_SECONDS)
     authorize = subparsers.add_parser("authorize-recovery")
     authorize.add_argument("queue_json", type=Path)
     authorize.add_argument("--page", type=int, required=True)
@@ -2472,6 +2536,12 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.command == "pending-unknown":
             result = mark_request_pending_unknown(args.queue_json, args.request_id, reason=args.reason)
+        elif args.command == "deadline":
+            result = request_deadline_status(
+                args.queue_json,
+                args.request_id,
+                timeout_seconds=args.timeout_seconds,
+            )
         elif args.command == "authorize-recovery":
             result = authorize_page_recovery(
                 args.queue_json,

@@ -9,6 +9,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import tempfile
+import time
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -59,25 +62,24 @@ def _doctor_next_action(report: Mapping[str, Any]) -> str:
     return "先根据 blockers 和 fix_advice 修复项目，再重新运行 doctor。"
 
 
-def doctor(
-    project: str | Path,
-    book_id: str,
-    *,
-    version: str | None = None,
-    mode: str = "strict",
-) -> dict[str, Any]:
-    """Run the existing pre-generation gate and return a compact summary."""
-    if mode not in MODES:
-        raise ValueError(f"mode must be one of {sorted(MODES)}")
-    report = preflight_project(
-        project,
-        book_id,
-        version=version,
-        phase="pre_generation",
-        mode=mode,
-    )
+def _passed_checks(report: Mapping[str, Any]) -> set[str]:
     return {
-        "status": report.get("status"),
+        str(item.get("check"))
+        for item in report.get("passed", [])
+        if isinstance(item, Mapping) and item.get("check")
+    }
+
+
+def _gate_value(checks: set[str], required: tuple[str, ...]) -> str:
+    return "passed" if all(check in checks for check in required) else "hold"
+
+
+def _doctor_summary(report: Mapping[str, Any], *, elapsed_ms: int | str = "unknown") -> dict[str, Any]:
+    """Project one full preflight report into a compact, auditable handoff."""
+    checks = _passed_checks(report)
+    status = str(report.get("status") or "blocked")
+    return {
+        "status": status,
         "phase": report.get("phase"),
         "mode": report.get("mode"),
         "project_root": report.get("project_root"),
@@ -85,12 +87,75 @@ def doctor(
         "version": report.get("version"),
         "page_count": report.get("page_count"),
         "plan_fingerprint": report.get("plan_fingerprint"),
+        "elapsed_ms": elapsed_ms,
+        "gate_summary": {
+            "assets": _gate_value(
+                checks,
+                ("approved_asset_and_style_references", "production_dependency_closure"),
+            ),
+            "content": _gate_value(checks, ("research_traceability", "content_gate")),
+            "storyboard": _gate_value(checks, ("page_numbers_match", "page_text_matches_storyboard")),
+            "pages": _gate_value(checks, ("page_manifest_validation",)),
+        },
+        "input_snapshot": {
+            "status": "stable" if status == "passed" else "unstable",
+            "plan_fingerprint": report.get("plan_fingerprint"),
+        },
+        "generation_authorization": (
+            "READY_FOR_USER_AUTHORIZATION" if status == "passed" else "HOLD"
+        ),
+        "image_generation": "SKIPPED",
         "blockers": list(report.get("blockers") or []),
         "warnings": list(report.get("warnings") or []),
         "image_model_calls": report.get("image_model_calls", 0),
         "write_operations": report.get("write_operations", 0),
         "next_action": _doctor_next_action(report),
     }
+
+
+def _write_json_report(path: str | Path, report: Mapping[str, Any]) -> Path:
+    target = Path(path).resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, temp_name = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=target.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            json.dump(report, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_name, target)
+    finally:
+        if os.path.exists(temp_name):
+            os.unlink(temp_name)
+    return target
+
+
+def doctor(
+    project: str | Path,
+    book_id: str,
+    *,
+    version: str | None = None,
+    mode: str = "strict",
+    report_json: str | Path | None = None,
+) -> dict[str, Any]:
+    """Run the existing pre-generation gate and return a compact summary."""
+    if mode not in MODES:
+        raise ValueError(f"mode must be one of {sorted(MODES)}")
+    started = time.perf_counter()
+    report = preflight_project(
+        project,
+        book_id,
+        version=version,
+        phase="pre_generation",
+        mode=mode,
+    )
+    result = _doctor_summary(
+        report,
+        elapsed_ms=max(0, round((time.perf_counter() - started) * 1000)),
+    )
+    if report_json is not None:
+        result["report_path"] = str(_write_json_report(report_json, report))
+    return result
 
 
 def _state_counts(state: Mapping[str, Any]) -> dict[str, int]:
@@ -117,6 +182,23 @@ def _available_authorization(state: Mapping[str, Any], job: Mapping[str, Any]) -
             continue
         return dict(authorization)
     return None
+
+
+def _pending_unknown_pages(state: Mapping[str, Any], jobs: list[Mapping[str, Any]]) -> list[int]:
+    """Find failed page jobs whose current request needs explicit recovery."""
+    unknown_request_ids = {
+        str(record.get("request_id"))
+        for record in state.get("request_lifecycle", [])
+        if isinstance(record, Mapping)
+        and record.get("terminal_state") in {"pending_unknown", "timed_out"}
+        and record.get("request_id")
+    }
+    return sorted(
+        int(job["page"])
+        for job in jobs
+        if job.get("status") == "failed"
+        and str(job.get("current_request_id")) in unknown_request_ids
+    )
 
 
 def _resume_summary(
@@ -178,6 +260,7 @@ def resume(
         max_in_flight=1,
         max_attempts=max_attempts,
         allow_standalone_legacy=False,
+        require_visual_review=True,
     )
     jobs = [job for job in state.get("jobs", []) if isinstance(job, Mapping)]
     running_pages = sorted(int(job["page"]) for job in jobs if job.get("status") in ACTIVE_STATUSES)
@@ -188,6 +271,17 @@ def resume(
             state=state,
             running_pages=running_pages,
             next_action="先完成或明确处理运行中的页面，再继续领取下一页。",
+        )
+
+    unknown_pages = _pending_unknown_pages(state, jobs)
+    if unknown_pages:
+        return _resume_summary(
+            status="blocked",
+            queue_path=resolved_queue,
+            state=state,
+            blocked_pages=unknown_pages,
+            reason="manual_intervention_required",
+            next_action="先检查未知请求的产物；获得新授权后使用 authorize-recovery，再运行 claim-recovery。",
         )
 
     failed_pages = sorted(int(job["page"]) for job in jobs if job.get("status") == "failed")
@@ -276,6 +370,7 @@ def _parser() -> argparse.ArgumentParser:
     check.add_argument("book_id")
     check.add_argument("--version")
     check.add_argument("--mode", choices=sorted(MODES), default="strict")
+    check.add_argument("--report-json", type=Path, help="write full evidence without printing it")
 
     continue_production = subparsers.add_parser("resume", help="reuse the queue and claim at most one next page")
     continue_production.add_argument("project", type=Path)
@@ -298,7 +393,13 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         if args.command == "doctor":
-            result = doctor(args.project, args.book_id, version=args.version, mode=args.mode)
+            result = doctor(
+                args.project,
+                args.book_id,
+                version=args.version,
+                mode=args.mode,
+                report_json=args.report_json,
+            )
         elif args.command == "resume":
             result = resume(
                 args.project,

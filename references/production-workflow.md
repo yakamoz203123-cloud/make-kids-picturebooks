@@ -1,15 +1,15 @@
 # 精简生产流程 V1.2（第一阶段）
 
-本流程仍由 `make-kids-picturebooks` 一个 Skill 执行。第一阶段只精简默认路径和文档责任，不新建缓存数据库、状态机、队列或审批服务，不改变 `schema_version: 1`。
+本流程仍由 `make-kids-picturebooks` 一个 Skill 执行。优化只收紧入口和证据流，不新建缓存数据库、第二套验证系统或审批服务，不改变 `schema_version: 1`。
 
 ## 第一阶段最短路径
 
 ```text
-新项目：输入契约 → 知识门禁 → 故事/整本分镜 → 资产锁定
-      → 一次整本 strict 预检 → 串行逐页生图 → 页面审核
+新项目：输入契约 → 章节锁定快照 → 知识门禁 → 故事/整本分镜 → 资产锁定
+      → 一次整本 strict 预检 → 用户授权 → 串行逐页生图 → 页面审核
       → 失败页局部返工 → pure-images 确定性交付 → 最终验收
 
-续做项目：项目摘要 → 当前页任务/依赖 → 有效预检回执复用检查
+续做项目：项目摘要 → 当前页任务/依赖 → 有效预检回执/快照复用检查
       → 一页一次轻量检查 → 串行生图 → 页面审核
 ```
 
@@ -20,13 +20,19 @@
 日常生产只需要记住三个动作：
 
 ```bash
-python3 "$SKILL_DIR/scripts/workflow.py" doctor /absolute/project b01 --version v1
+python3 "$SKILL_DIR/scripts/workflow.py" doctor /absolute/project b01 --version v1 --report-json /absolute/reports/b01-preflight.json
 python3 "$SKILL_DIR/scripts/workflow.py" resume /absolute/project b01 --version v1
 python3 "$SKILL_DIR/scripts/workflow.py" resume /absolute/project b01 --version v1 --approval "用户批准继续生成下一页" --max-calls 1
 python3 "$SKILL_DIR/scripts/workflow.py" deliver /absolute/project b01 /absolute/project/books/b01/v1/delivery/pure-image-delivery-v1 --version v1
 ```
 
-`doctor` 只读执行现有 `pre_generation/strict`；`resume` 复用现有预检回执和队列，默认单页串行，并且一次最多领取一页；没有明确授权时安全停止并返回 `authorization_required`。页面正在运行时返回 `waiting`，不会把运行状态擅自解释为中断；未知请求、失败页和其他阻断继续交给底层生命周期命令处理。`deliver` 只是转交现有 `release_pure_image_delivery.py`，不新增发布判定。需要查看完整 evidence 或处理历史兼容项目时，再使用下面的底层命令。
+`doctor` 只读执行现有 `pre_generation/strict`，默认打印紧凑摘要；`--report-json` 才保存完整 evidence。摘要至少包含 `elapsed_ms`、`gate_summary`、`input_snapshot.plan_fingerprint`、`generation_authorization` 和 `image_generation=SKIPPED`。`READY_FOR_USER_AUTHORIZATION` 只表示可以等待用户授权，不能自动授权或生图；`HOLD` 必须先修复 blocker。`resume` 复用有效预检回执和队列，默认单页串行、默认开启视觉审核门禁，并且一次最多领取一页；没有明确授权时安全停止并返回 `authorization_required`。页面正在运行时返回 `waiting`，不会把运行状态擅自解释为中断；未知请求、失败页和其他阻断继续交给底层生命周期命令处理。正式生图调用的本地保护时限为 180 秒；`generation_queue.py deadline QUEUE_JSON --request-id REQUEST_ID` 只读报告是否达到时限，不改变状态，也不证明远端失败。`deliver` 只是转交现有 `release_pure_image_delivery.py`，不新增发布判定。需要查看完整 evidence 或处理历史兼容项目时，再使用下面的底层命令。
+
+### 0.6 一次锁定、一次预检
+
+规划完成后，把本章故事、分镜、页面清单、研究白名单、story-claim trace、角色/画风版本和生产参考图视为一个只读输入快照。资产 manifest 先核验：正式不可变资产只能引用，生产参考图不能混入正式资产包。随后只运行一次 `doctor --mode strict`；内容、科学、连续性、页面和生产依赖检查共享同一快照，门禁只检测不互相修复。任一源文件改变，先更新快照，再按失效范围重跑。
+
+终端只看摘要；详细报告留在 `--report-json` 指定路径。这样不会因为长 evidence 输出拖慢协作，也不会把“文件存在”误当作视觉审核通过。图片模型调用只能出现在用户授权后的 `resume`/队列阶段，预检阶段必须为 `image_generation=SKIPPED`。
 
 ## 0. 输入契约和唯一职责
 
@@ -60,9 +66,9 @@ python3 "$SKILL_DIR/scripts/workflow.py" deliver /absolute/project b01 /absolute
 
 这是一次规划，不在逐页生产阶段重复整本研究、故事编辑或全书审计。
 
-先完成知识门禁、教育目标卡、角色身份锁定、完整 `story.md`、全书 `storyboard.json`、逐页正文、`page-manifest.json`、`layout.json` 和页面任务。
+先完成知识门禁、教育目标卡、角色身份锁定、简短 `story-design.md`、完整 `story.md`、全书 `storyboard.json`、逐页正文、`page-manifest.json`、`layout.json` 和页面任务。
 
-故事顺序是“先故事、再页面、再镜头”：采用视觉事件驱动分页，允许删除、合并、拆分或调整页面，由故事和视觉事件自主决定页数。正文中的多个重要动作或知识事件必须删减、拆分或重新安排，直到一张静态图能表达本页主要事件；每个关键科学变化通过儿童行动—期待—发现推动，不只列成观察说明清单。
+故事顺序是“先故事、再页面、再镜头”：先进入故事设计模块，按 [references/story-design.md](story-design.md) 完成一张最小故事卡和轻量门禁，再写正文。采用视觉事件驱动分页，允许删除、合并、拆分或调整页面，由故事和视觉事件自主决定页数。正文中的多个重要动作或知识事件必须删减、拆分或重新安排，直到一张静态图能表达本页主要事件；每个关键科学变化通过儿童行动—期待—发现推动，不只列成观察说明清单。故事门禁未通过时不得进入正式分镜。
 
 分镜完成后先做整本视觉节奏，再逐页选镜头；每页一个主要视觉任务，写清故事任务、视觉主角、关键动作、科学证据、构图理由、文字安全区和前后页状态；最后做相邻页重复审计，只保留有价值的重复。
 
@@ -73,11 +79,12 @@ Research 输入包先运行 `content_gate.py validate-packet`，生成 `knowledg
 规划、资产解析和 `layout_design` 完成后，在第一张正式图片提交前运行：
 
 ```bash
-python3 "$SKILL_DIR/scripts/project_preflight.py" \
-  /absolute/project b01 --version v1 --phase pre_generation --mode strict
+python3 "$SKILL_DIR/scripts/workflow.py" doctor \
+  /absolute/project b01 --version v1 --mode strict \
+  --report-json /absolute/reports/b01-preflight.json
 ```
 
-预检只读，不创建队列、不写项目、不调用图片模型。`report-only` 只用于诊断。`generation_queue.py init` 在这些前置门禁之前不能运行；它不会替代 Research、教育目标、内容、strict-assets 或比例检查，只验证结构输入。正式 `xiaohongshu-feed-3x4` 页面源图的期望画布是精确 `1080×1440`、RGB、无 alpha；队列缓存检查和 `pre_delivery` 正式图片检查必须使用同一契约，不能只因为图片比例为 3:4 就复用其他尺寸。
+预检只读，不创建队列、不写项目、不调用图片模型；`--report-json` 只写报告文件。`report-only` 只用于诊断。`generation_queue.py init` 在这些前置门禁之前不能运行；它不会替代 Research、教育目标、内容、strict-assets 或比例检查，只验证结构输入。正式 `xiaohongshu-feed-3x4` 页面源图的期望画布是精确 `1080×1440`、RGB、无 alpha；队列缓存检查和 `pre_delivery` 正式图片检查必须使用同一契约，不能只因为图片比例为 3:4 就复用其他尺寸。
 
 strict 回执至少保留 `status`、`phase`、`mode`、`blockers`、`warnings`、`write_operations`、`image_model_calls`、页数、`page_task_assembly.plan_fingerprint`、内容闸门 evidence，以及研究/claim、批准资产/画风、引用文件的 SHA-256。
 
@@ -158,7 +165,7 @@ python3 "$SKILL_DIR/scripts/release_pure_image_delivery.py" \
 
 先完成 `layout_design` 再调用图像生成器；稳定基础提示词只保留画风、角色不变特征、比例、全局禁项和文字安全区，每页只追加场景动作、道具、知识证据及前后页状态。正式参考图使用 `production_reference_path`。每页一次生成；历史“两页一批”不代表并行许可。
 
-超时按 `timeout-request → 检查产物 → pending-unknown → 停止` 处理。未经新授权不得恢复、自动重试或领取下一页；不要把调用开始当作提交成功，也不要把技术生成成功当作人工视觉批准。
+超时按 `deadline → 检查产物 → timeout-request → pending-unknown → 停止` 处理。未经新授权不得恢复、自动重试或领取下一页；不要把调用开始当作提交成功，也不要把技术生成成功当作人工视觉批准。`deadline` 是本地保护探针，不是远端服务失败判定。
 
 ## 4. 续做最小读取集
 
@@ -175,7 +182,7 @@ python3 "$SKILL_DIR/scripts/release_pure_image_delivery.py" \
 
 ## 5. 失效和重新规划
 
-研究内容、年龄档、故事、页数、关键角色/画风、连续性契约、输出模式或预检规则变化，或者无法证明关键依赖未变时，重新运行一次整本 strict。
+研究内容、年龄档、故事、页数、关键角色/画风、连续性契约、输出模式或预检规则变化，或者 `input_snapshot.plan_fingerprint` 无法复用时，重新运行一次整本 strict。只要快照未变，续做不重新扫描研究包、全书故事或全部资产。
 
 单页提示词或单页资产变化只使当前页失效，只重建和重新生成该页；不要把单页返工扩大成整本重做。
 
@@ -195,4 +202,4 @@ python3 "$SKILL_DIR/scripts/release_pure_image_delivery.py" \
 
 ## 8. 指标
 
-只记录真实可观测的总耗时、图像产物跨度、真实模型等待、图像生成调用次数、失败率、返工、缓存命中、断点恢复和输出质量；不可观测值写 `unknown`，不能由空错误列表推断为零。
+只记录真实可观测的总耗时、预检 `elapsed_ms`、图像产物跨度、真实模型等待、图像生成调用次数、失败率、返工、缓存命中、断点恢复和输出质量；不可观测值写 `unknown`，不能由空错误列表推断为零。`doctor` 的耗时只代表本次可观测预检运行，不代表图片模型等待时间。
